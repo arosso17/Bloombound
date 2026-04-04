@@ -176,7 +176,8 @@ class EasterClientApp:
         self.next_udp_hello_at = 0.0
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
-            "egg": load_visual_asset("egg"),
+            "egg_revival": load_visual_asset("egg_revival"),
+            "egg_restoration": load_visual_asset("egg_restoration"),
             "bramble_enemy": load_visual_asset("bramble_enemy"),
             "heart_bloom_dormant": load_visual_asset("heart_bloom_dormant"),
             "heart_bloom_restored": load_visual_asset("heart_bloom_restored"),
@@ -517,9 +518,9 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
-            egg_color = RESTORATION_EGG_COLOR if egg.get("egg_type") == "restoration" else REVIVAL_EGG_COLOR
-            pg.draw.circle(screen, egg_color, (egg_x, egg_y), 14, width=3)
-            render_visual_asset(screen, self.visual_assets["egg"], (egg_x, egg_y))
+            egg_type = str(egg.get("egg_type", "revival"))
+            egg_asset = "egg_restoration" if egg_type == "restoration" else "egg_revival"
+            render_visual_asset(screen, self.visual_assets[egg_asset], (egg_x, egg_y))
 
         for enemy in self.snapshot.enemies or []:
             display_x, display_y = self._display_position("enemy", str(enemy["id"]), float(enemy["x"]), float(enemy["y"]))
@@ -769,8 +770,9 @@ class EasterClientApp:
         for decoration in self.current_map.decorations:
             if not self._world_point_visible(decoration.x, decoration.y, playfield_rect, camera_rect, margin=96):
                 continue
+            asset_id = self._decoration_asset_id(decoration.asset_id, decoration.x, decoration.y)
             try:
-                asset = load_visual_asset(decoration.asset_id)
+                asset = load_visual_asset(asset_id)
             except FileNotFoundError:
                 dx, dy = self._screen_point(decoration.x, decoration.y, playfield_rect, camera_rect)
                 pg.draw.rect(screen, (216, 155, 95), pg.Rect(dx - 10, dy - 10, 20, 20), border_radius=4)
@@ -778,6 +780,33 @@ class EasterClientApp:
                 continue
             dx, dy = self._screen_point(decoration.x, decoration.y, playfield_rect, camera_rect)
             render_visual_asset(screen, asset, (dx, dy), scale=max(0.1, decoration.scale))
+
+    def _decoration_asset_id(self, asset_id: str, world_x: float, world_y: float) -> str:
+        restored_zone = self._restored_zone_near(world_x, world_y)
+        if restored_zone is None:
+            return asset_id
+
+        if asset_id.startswith("dead_"):
+            candidate_id = "restored_" + asset_id[len("dead_") :]
+        elif asset_id.startswith("deaf_"):
+            candidate_id = "restored_" + asset_id[len("deaf_") :]
+        else:
+            return asset_id
+
+        try:
+            load_visual_asset(candidate_id)
+            return candidate_id
+        except FileNotFoundError:
+            return asset_id
+
+    def _restored_zone_near(self, world_x: float, world_y: float) -> dict | None:
+        for zone in self.snapshot.restoration_zones or []:
+            if not zone.get("restored", False):
+                continue
+            radius = float(zone.get("radius", 0.0))
+            if ((float(zone["x"]) - world_x) ** 2 + (float(zone["y"]) - world_y) ** 2) ** 0.5 <= radius:
+                return zone
+        return None
 
     def _screen_rect(
         self,

@@ -66,11 +66,15 @@ class NavGrid:
     def in_bounds(self, cell: GridCell) -> bool:
         return 0 <= cell[0] < self.cols and 0 <= cell[1] < self.rows
 
-    def is_walkable(self, cell: GridCell) -> bool:
-        return self.in_bounds(cell) and cell not in self.blocked
+    def is_walkable(self, cell: GridCell, extra_blocked: set[GridCell] | frozenset[GridCell] | None = None) -> bool:
+        return self.in_bounds(cell) and cell not in self.blocked and (extra_blocked is None or cell not in extra_blocked)
 
-    def nearest_walkable(self, start: GridCell) -> GridCell | None:
-        if self.is_walkable(start):
+    def nearest_walkable(
+        self,
+        start: GridCell,
+        extra_blocked: set[GridCell] | frozenset[GridCell] | None = None,
+    ) -> GridCell | None:
+        if self.is_walkable(start, extra_blocked):
             return start
 
         queue: deque[GridCell] = deque([start])
@@ -82,7 +86,7 @@ class NavGrid:
                     continue
                 if not self.in_bounds(neighbor):
                     continue
-                if self.is_walkable(neighbor):
+                if self.is_walkable(neighbor, extra_blocked):
                     return neighbor
                 visited.add(neighbor)
                 queue.append(neighbor)
@@ -98,9 +102,15 @@ class NavGrid:
         ]
 
 
-def find_path(nav_grid: NavGrid, start: GridCell, goal: GridCell) -> list[GridCell]:
-    walkable_start = nav_grid.nearest_walkable(start)
-    walkable_goal = nav_grid.nearest_walkable(goal)
+def find_path(
+    nav_grid: NavGrid,
+    start: GridCell,
+    goal: GridCell,
+    *,
+    extra_blocked: set[GridCell] | frozenset[GridCell] | None = None,
+) -> list[GridCell]:
+    walkable_start = nav_grid.nearest_walkable(start, extra_blocked)
+    walkable_goal = nav_grid.nearest_walkable(goal, extra_blocked)
     if walkable_start is None or walkable_goal is None:
         return []
     if walkable_start == walkable_goal:
@@ -117,7 +127,7 @@ def find_path(nav_grid: NavGrid, start: GridCell, goal: GridCell) -> list[GridCe
             break
 
         for neighbor in nav_grid.neighbors(current):
-            if not nav_grid.is_walkable(neighbor):
+            if not nav_grid.is_walkable(neighbor, extra_blocked):
                 continue
             new_cost = cost_so_far[current] + 1
             if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:

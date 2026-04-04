@@ -1,0 +1,58 @@
+{
+  "asset_id": "egg_restoration",
+  "canvas": {
+    "width": 40,
+    "height": 56
+  },
+  "shapes": [
+    {
+      "kind": "ellipse",
+      "x": 7,
+      "y": 6,
+      "width": 26,
+      "height": 38,
+      "fill": [
+        132,
+        211,
+        176
+      ]
+    },
+    {
+      "kind": "ellipse",
+      "x": 11,
+      "y": 12,
+      "width": 10,
+      "height": 16,
+      "fill": [
+        214,
+        248,
+        231
+      ]
+    },
+    {
+      "kind": "ellipse",
+      "x": 16,
+      "y": 22,
+      "width": 10,
+      "height": 10,
+      "fill": [
+        255,
+        239,
+        154
+      ]
+    },
+    {
+      "kind": "ellipse",
+      "x": 7,
+      "y": 6,
+      "width": 26,
+      "height": 38,
+      "outline": [
+        71,
+        152,
+        119
+      ],
+      "outline_width": 2
+    }
+  ]
+}
