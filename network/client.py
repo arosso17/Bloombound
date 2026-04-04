@@ -71,6 +71,7 @@ class NetworkClient:
     def __init__(self, host: str, port: int, name: str) -> None:
         self.host = host
         self.port = port
+        self.udp_port = port + 1
         self.name = name
         self.sock: socket.socket | None = None
         self.udp_sock: socket.socket | None = None
@@ -106,7 +107,7 @@ class NetworkClient:
             return False
         try:
             with self.udp_send_lock:
-                self.udp_sock.sendto(encode_message(message), (self.host, self.port))
+                self.udp_sock.sendto(encode_message(message), (self.host, self.udp_port))
             return True
         except OSError:
             return False
@@ -238,6 +239,7 @@ class EasterClientApp:
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.snapshot.world_width = int(message["world"]["width"])
                 self.snapshot.world_height = int(message["world"]["height"])
+                self.network.udp_port = int(message.get("udp_port", self.network.udp_port))
                 self.connected = True
                 self.connection_closed = False
                 self.udp_ready = False

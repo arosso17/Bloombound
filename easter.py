@@ -12,6 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     server_parser = subparsers.add_parser("server", help="Run the authoritative game server")
     server_parser.add_argument("--host", default="0.0.0.0")
     server_parser.add_argument("--port", type=int, default=5050)
+    server_parser.add_argument("--udp-port", type=int)
     server_parser.add_argument("--tick-rate", type=int, default=30)
     server_parser.add_argument("--expected-players", type=int, default=2)
     server_parser.add_argument("--map-id", default="heart_garden_slice")
@@ -25,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     host_parser = subparsers.add_parser("host", help="Run a local server and client together")
     host_parser.add_argument("--port", type=int, default=5050)
+    host_parser.add_argument("--udp-port", type=int)
     host_parser.add_argument("--tick-rate", type=int, default=30)
     host_parser.add_argument("--expected-players", type=int, default=2)
     host_parser.add_argument("--name", default="Host")
@@ -41,6 +43,7 @@ def main() -> None:
         GameServer(
             host=args.host,
             port=args.port,
+            udp_port=args.udp_port,
             tick_rate=args.tick_rate,
             expected_players=args.expected_players,
             map_id=args.map_id,
@@ -56,6 +59,7 @@ def main() -> None:
         server = GameServer(
             host="0.0.0.0",
             port=args.port,
+            udp_port=args.udp_port,
             tick_rate=args.tick_rate,
             expected_players=args.expected_players,
             map_id=args.map_id,

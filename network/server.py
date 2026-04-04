@@ -27,6 +27,7 @@ class GameServer:
         self,
         host: str = "0.0.0.0",
         port: int = 5050,
+        udp_port: int | None = None,
         tick_rate: int = 30,
         expected_players: int = 2,
         map_id: str = "heart_garden_slice",
@@ -34,6 +35,7 @@ class GameServer:
     ) -> None:
         self.host = host
         self.port = port
+        self.udp_port = udp_port if udp_port is not None else port + 1
         self.tick_rate = tick_rate
         self.state = GameState(expected_players=expected_players, map_id=map_id)
         self.stop_event = threading.Event()
@@ -56,7 +58,7 @@ class GameServer:
         self.server_socket.settimeout(0.5)
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.udp_socket.bind((self.host, self.port))
+        self.udp_socket.bind((self.host, self.udp_port))
         self.udp_socket.settimeout(0.5)
         self.accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
         self.udp_thread = threading.Thread(target=self._udp_loop, daemon=True)
@@ -118,7 +120,7 @@ class GameServer:
                     "player_id": player_id,
                     "map_id": self.state.map_id,
                     "tick_rate": self.tick_rate,
-                    "udp_port": self.port,
+                    "udp_port": self.udp_port,
                     "match_phase": self.state.match_phase,
                     "world": self.state.build_snapshot()["world"],
                 },
