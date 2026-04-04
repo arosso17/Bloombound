@@ -179,11 +179,13 @@ class MapEditor:
             ("damage_per_second", "Damage / Sec"),
             ("egg_type", "Egg Type"),
         ]
-        for row_index, (field_key, label) in enumerate(field_specs, start=8):
+        base_row = 8
+        for index, (field_key, label) in enumerate(field_specs):
+            row_index = base_row + index * 2
             ttk.Label(parent, text=label).grid(row=row_index, column=0, sticky="w", pady=(3, 0))
             ttk.Entry(parent, textvariable=self.property_vars[field_key], width=24).grid(row=row_index + 1, column=0, sticky="ew", pady=(0, 2))
 
-        action_row = row_index + 2
+        action_row = base_row + len(field_specs) * 2
         ttk.Button(parent, text="Apply Object Changes", command=self.apply_selected_object_changes).grid(row=action_row, column=0, sticky="ew", pady=(10, 4))
         ttk.Button(parent, text="Delete Selected", command=self.delete_selected_object).grid(row=action_row + 1, column=0, sticky="ew")
 
