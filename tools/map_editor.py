@@ -123,6 +123,7 @@ class MapEditor:
         self.inspector_canvas.configure(yscrollcommand=inspector_scrollbar.set)
 
         inspector = ttk.Frame(self.inspector_canvas, padding=2)
+        self.inspector_frame = inspector
         self.inspector_window = self.inspector_canvas.create_window((0, 0), window=inspector, anchor="nw")
         inspector.bind("<Configure>", self._on_inspector_frame_configure)
         self.inspector_canvas.bind("<Configure>", self._on_inspector_canvas_configure)
@@ -132,6 +133,7 @@ class MapEditor:
         self._build_sidebar(sidebar)
         self._build_canvas(canvas_wrap)
         self._build_inspector(inspector)
+        self._bind_inspector_region(inspector)
 
     def _on_inspector_frame_configure(self, _event: tk.Event) -> None:
         self.inspector_canvas.configure(scrollregion=self.inspector_canvas.bbox("all"))
@@ -158,6 +160,12 @@ class MapEditor:
 
     def _on_inspector_mousewheel_linux_down(self, _event: tk.Event) -> None:
         self.inspector_canvas.yview_scroll(1, "units")
+
+    def _bind_inspector_region(self, widget: tk.Misc) -> None:
+        widget.bind("<Enter>", self._bind_inspector_mousewheel, add="+")
+        widget.bind("<Leave>", self._unbind_inspector_mousewheel, add="+")
+        for child in widget.winfo_children():
+            self._bind_inspector_region(child)
 
     def _build_sidebar(self, parent: ttk.Frame) -> None:
         file_row = ttk.Frame(parent)
