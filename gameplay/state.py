@@ -271,12 +271,13 @@ class GameState:
             delta_y = waypoint_y - enemy.y
             magnitude = math.hypot(delta_x, delta_y)
             if magnitude > 0.0:
+                step_distance = min(enemy.speed * dt, magnitude)
                 enemy.x, enemy.y = move_circle(
                     x=enemy.x,
                     y=enemy.y,
                     radius=enemy.radius,
-                    delta_x=(delta_x / magnitude) * enemy.speed * dt,
-                    delta_y=(delta_y / magnitude) * enemy.speed * dt,
+                    delta_x=(delta_x / magnitude) * step_distance,
+                    delta_y=(delta_y / magnitude) * step_distance,
                     world_width=self.map.world_width,
                     world_height=self.map.world_height,
                     collision_rects=self.map.collision_rects,
@@ -299,7 +300,19 @@ class GameState:
         if should_recompute:
             self.enemy_paths[enemy.enemy_id] = find_path(self.nav_grid, start_cell, target_cell)
             self.enemy_path_targets[enemy.enemy_id] = target_cell
-        return self.enemy_paths.get(enemy.enemy_id, [])
+
+        path = self.enemy_paths.get(enemy.enemy_id, [])
+        if not path:
+            return []
+
+        if start_cell in path:
+            path = path[path.index(start_cell) :]
+        elif path[0] != start_cell:
+            path = find_path(self.nav_grid, start_cell, target_cell)
+            self.enemy_path_targets[enemy.enemy_id] = target_cell
+
+        self.enemy_paths[enemy.enemy_id] = path
+        return path
 
     def _enemy_waypoint(
         self,
@@ -311,17 +324,22 @@ class GameState:
             return target.x, target.y
 
         current_cell = self.nav_grid.point_to_cell(enemy.x, enemy.y)
-        path_index = 0
-        if path[0] == current_cell:
-            path_index = 1
-        if path_index >= len(path):
+        remaining_path = path
+        if remaining_path[0] == current_cell:
+            remaining_path = remaining_path[1:]
+
+        while len(remaining_path) > 1:
+            waypoint_x, waypoint_y = self.nav_grid.cell_center(remaining_path[0])
+            if distance(enemy.x, enemy.y, waypoint_x, waypoint_y) > ENEMY_WAYPOINT_REACHED_DISTANCE:
+                break
+            remaining_path = remaining_path[1:]
+
+        self.enemy_paths[enemy.enemy_id] = remaining_path
+        if not remaining_path:
             return target.x, target.y
 
-        waypoint_cell = path[path_index]
+        waypoint_cell = remaining_path[0]
         waypoint_x, waypoint_y = self.nav_grid.cell_center(waypoint_cell)
-        if distance(enemy.x, enemy.y, waypoint_x, waypoint_y) <= ENEMY_WAYPOINT_REACHED_DISTANCE and path_index + 1 < len(path):
-            waypoint_cell = path[path_index + 1]
-            waypoint_x, waypoint_y = self.nav_grid.cell_center(waypoint_cell)
         return waypoint_x, waypoint_y
 
     def _set_player_spirit(self, player: PlayerState) -> None:
