@@ -32,15 +32,7 @@ class GameState:
         self.host_id = ""
         self.map_id = self.map.map_id
         self.players: dict[str, PlayerState] = {}
-        initial_egg_spawn = self.map.egg_spawns[0]
-        self.egg_spawn_index = 0
-        self.egg = EggState(
-            initial_egg_spawn.spawn_id,
-            initial_egg_spawn.x,
-            initial_egg_spawn.y,
-            egg_type=initial_egg_spawn.egg_type,
-            radius=initial_egg_spawn.radius,
-        )
+        self.eggs = self._build_eggs_from_map()
         shrine_def = self.map.shrine
         self.shrine = ShrineState(
             shrine_def.shrine_id,
@@ -100,7 +92,7 @@ class GameState:
         self.match_phase = "playing"
         self.tick = 0
         self.final_bloom.restored = False
-        self._reset_egg()
+        self._reset_eggs()
         enemy_def = self.map.enemy_spawns[0]
         self.enemy.x = enemy_def.x
         self.enemy.y = enemy_def.y
@@ -179,7 +171,7 @@ class GameState:
             "match_phase": self.match_phase,
             "world": {"width": self.map.world_width, "height": self.map.world_height},
             "players": [self._player_snapshot(player) for player in self.players.values()],
-            "egg": self.egg.to_dict(),
+            "eggs": [egg.to_dict() for egg in self.eggs],
             "shrine": self.shrine.to_dict(),
             "enemy": self.enemy.to_dict(),
             "final_bloom": self.final_bloom.to_dict(),
@@ -214,10 +206,8 @@ class GameState:
         if self._pressed(player, "debug_down") and player.state == "alive":
             self._set_player_spirit(player)
 
-        if player.state == "alive" and not self.egg.collected:
-            if distance(player.x, player.y, self.egg.x, self.egg.y) <= player.radius + self.egg.radius:
-                self.egg.collected = True
-                player.revival_eggs += 1
+        if player.state == "alive":
+            self._try_collect_eggs(player)
 
         if self._pressed(player, "interact"):
             if not self._try_revive(player):
@@ -246,7 +236,6 @@ class GameState:
             key=lambda spirit: distance(spirit.x, spirit.y, self.shrine.x, self.shrine.y),
         )
         player.revival_eggs -= 1
-        self._reset_egg()
         revived.state = "alive"
         revived.health = revived.max_health // 2
         revived.x = self.shrine.x + 36.0
@@ -296,22 +285,40 @@ class GameState:
         if player.state == "spirit":
             return
         if player.revival_eggs > 0:
-            self.egg.collected = False
-            self.egg.x = round(player.x, 2)
-            self.egg.y = round(player.y, 2)
+            self._drop_carried_eggs(player)
             player.revival_eggs = 0
         player.state = "spirit"
         player.health = 0
 
-    def _reset_egg(self) -> None:
-        spawn = self.map.egg_spawns[self.egg_spawn_index % len(self.map.egg_spawns)]
-        self.egg_spawn_index += 1
-        self.egg.collected = False
-        self.egg.egg_id = spawn.spawn_id
-        self.egg.egg_type = spawn.egg_type
-        self.egg.radius = spawn.radius
-        self.egg.x = spawn.x
-        self.egg.y = spawn.y
+    def _build_eggs_from_map(self) -> list[EggState]:
+        return [
+            EggState(
+                spawn.spawn_id,
+                spawn.x,
+                spawn.y,
+                egg_type=spawn.egg_type,
+                radius=spawn.radius,
+            )
+            for spawn in self.map.egg_spawns
+        ]
+
+    def _reset_eggs(self) -> None:
+        self.eggs = self._build_eggs_from_map()
+
+    def _try_collect_eggs(self, player: PlayerState) -> None:
+        for egg in self.eggs:
+            if egg.collected:
+                continue
+            if distance(player.x, player.y, egg.x, egg.y) <= player.radius + egg.radius:
+                egg.collected = True
+                player.revival_eggs += 1
+
+    def _drop_carried_eggs(self, player: PlayerState) -> None:
+        collectible_eggs = [egg for egg in self.eggs if egg.collected]
+        for egg in collectible_eggs[: player.revival_eggs]:
+            egg.collected = False
+            egg.x = round(player.x, 2)
+            egg.y = round(player.y, 2)
 
     def _objective_text(self) -> str:
         if self.match_phase == "won":
@@ -322,4 +329,6 @@ class GameState:
             return "Carry the revival egg to the shrine to revive a teammate."
         if any(player.revival_eggs > 0 for player in self.players.values()):
             return "Carry the revival egg to the Heart Bloom to complete the map."
-        return "Find the revival egg before the bramble catches you."
+        if any(not egg.collected for egg in self.eggs):
+            return "Gather the map's revival eggs before the bramble catches you."
+        return "Bring your collected eggs to the Heart Bloom to complete the map."

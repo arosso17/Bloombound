@@ -38,7 +38,7 @@ class ClientSnapshot:
     world_height: int = 720
     match_phase: str = "lobby"
     players: list[dict] | None = None
-    egg: dict | None = None
+    eggs: list[dict] | None = None
     shrine: dict | None = None
     enemy: dict | None = None
     final_bloom: dict | None = None
@@ -97,7 +97,7 @@ class EasterClientApp:
         self.name_input = name[:24]
         self.selected_color_index = 0
         self.profile_initialized = False
-        self.snapshot = ClientSnapshot(players=[], egg=None, shrine=None)
+        self.snapshot = ClientSnapshot(players=[], eggs=[], shrine=None)
         self.connected = False
         self.connection_closed = False
         self.input_seq = 0
@@ -177,7 +177,7 @@ class EasterClientApp:
                 self.snapshot.tick = int(message.get("tick", 0))
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))
-                self.snapshot.egg = message.get("egg")
+                self.snapshot.eggs = list(message.get("eggs", []))
                 self.snapshot.shrine = message.get("shrine")
                 self.snapshot.enemy = message.get("enemy")
                 self.snapshot.final_bloom = message.get("final_bloom")
@@ -262,10 +262,12 @@ class EasterClientApp:
             bloom_asset = "heart_bloom_restored" if self.snapshot.final_bloom.get("restored") else "heart_bloom_dormant"
             render_visual_asset(screen, self.visual_assets[bloom_asset], (bloom_x, bloom_y))
 
-        if self.snapshot.egg and not self.snapshot.egg.get("collected", False):
+        for egg in self.snapshot.eggs or []:
+            if egg.get("collected", False):
+                continue
             egg_x, egg_y = self._screen_point(
-                self.snapshot.egg["x"],
-                self.snapshot.egg["y"],
+                egg["x"],
+                egg["y"],
                 playfield_rect,
                 camera_rect,
             )
