@@ -123,7 +123,15 @@
       "height": 34.0
     }
   ],
-  "decorations": [],
+  "decorations": [
+    {
+      "decoration_id": "decoration_1",
+      "asset_id": "dead_flower",
+      "x": 176.0,
+      "y": 416.0,
+      "scale": 0.5
+    }
+  ],
   "patrol_points": [
     {
       "point_id": "patrol_1a",
