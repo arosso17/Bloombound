@@ -324,11 +324,11 @@ class EasterClientApp:
     def _send_input(self, keys: pg.key.ScancodeWrapper) -> None:
         if not self.connected:
             return
-        move_x = float(keys[pg.K_d]) - float(keys[pg.K_a])
-        move_y = float(keys[pg.K_s]) - float(keys[pg.K_w])
+        move_x = float(keys[pg.K_d] or keys[pg.K_RIGHT]) - float(keys[pg.K_a] or keys[pg.K_LEFT])
+        move_y = float(keys[pg.K_s] or keys[pg.K_DOWN]) - float(keys[pg.K_w] or keys[pg.K_UP])
         self.current_move_x = move_x
         self.current_move_y = move_y
-        interact = bool(keys[pg.K_e])
+        interact = bool(keys[pg.K_e] or keys[pg.K_SPACE])
         debug_down = bool(keys[pg.K_k])
         current_state = (move_x, move_y, interact, debug_down)
         now = time.perf_counter()
