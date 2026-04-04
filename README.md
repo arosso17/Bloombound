@@ -57,6 +57,16 @@ python tools/visual_asset_editor.py
 
 The editor saves the same format the game loads at runtime, so authored visuals can be used directly by the client renderer.
 
+## Map Editor
+
+Maps live in `gameplay/maps/` as JSON files and can be edited with the dedicated map tool:
+
+```powershell
+python tools/map_editor.py
+```
+
+The map editor reads and writes the same schema the server loads at runtime, including collision rectangles, player spawns, egg spawns, shrine placement, enemy spawns, and the final bloom.
+
 ## Controls
 
 - `WASD` move
