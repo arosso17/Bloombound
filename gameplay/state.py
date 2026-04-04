@@ -5,10 +5,14 @@ import math
 from gameplay.collision import move_circle
 from gameplay.entities import EggState, EnemyState, FinalBloomState, PlayerInput, PlayerState, ShrineState
 from gameplay.map_loader import load_map
+from gameplay.navigation import NavGrid, find_path
 
 
 ALIVE_SPEED = 230.0
 SPIRIT_SPEED = 280.0
+NAV_CELL_SIZE = 40
+ENEMY_PATH_RECALC_TICKS = 8
+ENEMY_WAYPOINT_REACHED_DISTANCE = 10.0
 PLAYER_COLORS = [
     (242, 119, 119),
     (112, 193, 179),
@@ -32,6 +36,15 @@ class GameState:
         self.host_id = ""
         self.map_id = self.map.map_id
         self.players: dict[str, PlayerState] = {}
+        self.nav_grid = NavGrid.build(
+            world_width=self.map.world_width,
+            world_height=self.map.world_height,
+            cell_size=NAV_CELL_SIZE,
+            collision_rects=self.map.collision_rects,
+            agent_radius=18.0,
+        )
+        self.enemy_paths: dict[str, list[tuple[int, int]]] = {}
+        self.enemy_path_targets: dict[str, tuple[int, int]] = {}
         self.eggs = self._build_eggs_from_map()
         shrine_def = self.map.shrine
         self.shrine = ShrineState(
@@ -252,8 +265,10 @@ class GameState:
                 alive_targets,
                 key=lambda player: distance(player.x, player.y, enemy.x, enemy.y),
             )
-            delta_x = target.x - enemy.x
-            delta_y = target.y - enemy.y
+            path = self._path_for_enemy(enemy, target)
+            waypoint_x, waypoint_y = self._enemy_waypoint(enemy, target, path)
+            delta_x = waypoint_x - enemy.x
+            delta_y = waypoint_y - enemy.y
             magnitude = math.hypot(delta_x, delta_y)
             if magnitude > 0.0:
                 enemy.x, enemy.y = move_circle(
@@ -271,6 +286,43 @@ class GameState:
                 target.health = max(0, int(target.health - enemy.damage_per_second * dt))
                 if target.health <= 0:
                     self._set_player_spirit(target)
+
+    def _path_for_enemy(self, enemy: EnemyState, target: PlayerState) -> list[tuple[int, int]]:
+        start_cell = self.nav_grid.point_to_cell(enemy.x, enemy.y)
+        target_cell = self.nav_grid.point_to_cell(target.x, target.y)
+        cached_target = self.enemy_path_targets.get(enemy.enemy_id)
+        should_recompute = (
+            enemy.enemy_id not in self.enemy_paths
+            or cached_target != target_cell
+            or self.tick % ENEMY_PATH_RECALC_TICKS == 0
+        )
+        if should_recompute:
+            self.enemy_paths[enemy.enemy_id] = find_path(self.nav_grid, start_cell, target_cell)
+            self.enemy_path_targets[enemy.enemy_id] = target_cell
+        return self.enemy_paths.get(enemy.enemy_id, [])
+
+    def _enemy_waypoint(
+        self,
+        enemy: EnemyState,
+        target: PlayerState,
+        path: list[tuple[int, int]],
+    ) -> tuple[float, float]:
+        if not path:
+            return target.x, target.y
+
+        current_cell = self.nav_grid.point_to_cell(enemy.x, enemy.y)
+        path_index = 0
+        if path[0] == current_cell:
+            path_index = 1
+        if path_index >= len(path):
+            return target.x, target.y
+
+        waypoint_cell = path[path_index]
+        waypoint_x, waypoint_y = self.nav_grid.cell_center(waypoint_cell)
+        if distance(enemy.x, enemy.y, waypoint_x, waypoint_y) <= ENEMY_WAYPOINT_REACHED_DISTANCE and path_index + 1 < len(path):
+            waypoint_cell = path[path_index + 1]
+            waypoint_x, waypoint_y = self.nav_grid.cell_center(waypoint_cell)
+        return waypoint_x, waypoint_y
 
     def _set_player_spirit(self, player: PlayerState) -> None:
         if player.state == "spirit":
@@ -311,6 +363,8 @@ class GameState:
 
     def _reset_enemies(self) -> None:
         self.enemies = self._build_enemies_from_map()
+        self.enemy_paths = {}
+        self.enemy_path_targets = {}
 
     def _try_collect_eggs(self, player: PlayerState) -> None:
         for egg in self.eggs:
