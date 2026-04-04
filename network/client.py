@@ -112,6 +112,7 @@ class EasterClientApp:
             "bramble_enemy": load_visual_asset("bramble_enemy"),
             "heart_bloom_dormant": load_visual_asset("heart_bloom_dormant"),
             "heart_bloom_restored": load_visual_asset("heart_bloom_restored"),
+            "player": load_visual_asset("player"),
         }
 
     def run(self) -> None:
@@ -287,9 +288,17 @@ class EasterClientApp:
                 pg.draw.circle(screen, SPIRIT_COLOR, (px, py), radius + 2)
                 pg.draw.circle(screen, color, (px, py), radius, width=2)
             else:
-                pg.draw.circle(screen, color, (px, py), radius)
+                player_scale = max(0.45, (player["radius"] * 2.25) / self.visual_assets["player"].width)
+                render_visual_asset(
+                    screen,
+                    self.visual_assets["player"],
+                    (px, py),
+                    scale=player_scale,
+                    color_overrides={"player_head": color},
+                )
             if player["id"] == self.player_id:
-                pg.draw.circle(screen, SELF_RING_COLOR, (px, py), radius + 5, width=2)
+                ring_radius = max(radius + 5, int((self.visual_assets["player"].width * player_scale) / 2) + 2)
+                pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
             name_surf = small_font.render(
                 f"{player['name']} ({player['revival_eggs']})",
                 True,

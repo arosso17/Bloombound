@@ -16,6 +16,7 @@ class VisualShape:
     kind: str
     x: float
     y: float
+    color_key: str | None = None
     width: float = 0.0
     height: float = 0.0
     radius: float = 0.0
@@ -52,6 +53,7 @@ def load_visual_asset(asset_id: str) -> VisualAsset:
             kind=shape["kind"],
             x=float(shape.get("x", 0.0)),
             y=float(shape.get("y", 0.0)),
+            color_key=shape.get("color_key"),
             width=float(shape.get("width", 0.0)),
             height=float(shape.get("height", 0.0)),
             radius=float(shape.get("radius", 0.0)),
@@ -77,24 +79,35 @@ def render_visual_asset(
     center: tuple[int, int],
     *,
     scale: float = 1.0,
+    color_overrides: dict[str, tuple[int, ...]] | None = None,
 ) -> None:
     width = max(1, int(asset.width * scale))
     height = max(1, int(asset.height * scale))
     asset_surface = pg.Surface((width, height), pg.SRCALPHA)
 
     for shape in asset.shapes:
-        _draw_shape(asset_surface, shape, scale)
+        _draw_shape(asset_surface, shape, scale, color_overrides=color_overrides)
 
     top_left = (int(center[0] - width / 2), int(center[1] - height / 2))
     target.blit(asset_surface, top_left)
 
 
-def _draw_shape(surface: pg.Surface, shape: VisualShape, scale: float) -> None:
+def _draw_shape(
+    surface: pg.Surface,
+    shape: VisualShape,
+    scale: float,
+    *,
+    color_overrides: dict[str, tuple[int, ...]] | None = None,
+) -> None:
+    fill_color = shape.fill
+    if color_overrides is not None and shape.color_key is not None:
+        fill_color = color_overrides.get(shape.color_key, fill_color)
+
     if shape.kind == "circle":
         center = (int(shape.x * scale), int(shape.y * scale))
         radius = max(1, int(shape.radius * scale))
-        if shape.fill is not None:
-            pg.draw.circle(surface, shape.fill, center, radius)
+        if fill_color is not None:
+            pg.draw.circle(surface, fill_color, center, radius)
         if shape.outline is not None and shape.outline_width > 0:
             pg.draw.circle(surface, shape.outline, center, radius, width=max(1, int(shape.outline_width * scale)))
         return
@@ -106,11 +119,11 @@ def _draw_shape(surface: pg.Surface, shape: VisualShape, scale: float) -> None:
             max(1, int(shape.width * scale)),
             max(1, int(shape.height * scale)),
         )
-        if shape.fill is not None:
+        if fill_color is not None:
             if shape.kind == "rect":
-                pg.draw.rect(surface, shape.fill, rect, border_radius=min(16, rect.width // 4, rect.height // 4))
+                pg.draw.rect(surface, fill_color, rect, border_radius=min(16, rect.width // 4, rect.height // 4))
             else:
-                pg.draw.ellipse(surface, shape.fill, rect)
+                pg.draw.ellipse(surface, fill_color, rect)
         if shape.outline is not None and shape.outline_width > 0:
             outline_width = max(1, int(shape.outline_width * scale))
             if shape.kind == "rect":
