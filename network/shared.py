@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import socket
 from typing import Callable
@@ -55,4 +57,3 @@ def safe_close(sock: socket.socket | None) -> None:
         sock.close()
     except OSError:
         pass
-

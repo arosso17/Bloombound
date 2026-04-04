@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 
 from gameplay.entities import EggState, PlayerInput, PlayerState, ShrineState
