@@ -99,6 +99,7 @@ class GameServer:
                 {
                     "type": "welcome",
                     "player_id": player_id,
+                    "map_id": self.state.map_id,
                     "tick_rate": self.tick_rate,
                     "match_phase": self.state.match_phase,
                     "world": self.state.build_snapshot()["world"],

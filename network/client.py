@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import pygame as pg
 
+from gameplay.map_loader import load_map
+from gameplay.map_types import MapDefinition
 from gameplay.state import PLAYER_COLORS
 from network.shared import read_messages_forever, safe_close, send_message
 
@@ -27,6 +29,10 @@ HEALTH_BG_COLOR = (233, 222, 212)
 HEALTH_FILL_COLOR = (120, 191, 104)
 LOSS_COLOR = (125, 76, 76)
 WIN_COLOR = (89, 143, 84)
+HEDGE_COLOR = (111, 139, 96)
+HEDGE_ACCENT_COLOR = (140, 171, 122)
+HEART_BLOOM_COLOR = (255, 170, 191)
+HEART_BLOOM_RESTORED_COLOR = (255, 215, 126)
 
 
 @dataclass
@@ -39,6 +45,7 @@ class ClientSnapshot:
     egg: dict | None = None
     shrine: dict | None = None
     enemy: dict | None = None
+    final_bloom: dict | None = None
     objective_text: str = ""
 
 
@@ -102,6 +109,7 @@ class EasterClientApp:
         self.expected_players = 1
         self.host_id = ""
         self.can_start = False
+        self.current_map: MapDefinition | None = None
 
     def run(self) -> None:
         pg.init()
@@ -145,6 +153,7 @@ class EasterClientApp:
             message_type = message.get("type")
             if message_type == "welcome":
                 self.player_id = str(message["player_id"])
+                self._load_map(str(message.get("map_id", "heart_garden")))
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.snapshot.world_width = int(message["world"]["width"])
                 self.snapshot.world_height = int(message["world"]["height"])
@@ -152,6 +161,7 @@ class EasterClientApp:
                 self.connection_closed = False
                 self._send_profile_update()
             elif message_type == "lobby_state":
+                self._load_map(str(message.get("map_id", "heart_garden")))
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.expected_players = int(message.get("expected_players", 1))
                 self.host_id = str(message.get("host_id", ""))
@@ -159,12 +169,14 @@ class EasterClientApp:
                 self.lobby_players = list(message.get("players", []))
                 self._sync_local_profile_from_lobby()
             elif message_type == "world_snapshot":
+                self._load_map(str(message.get("map_id", "heart_garden")))
                 self.snapshot.tick = int(message.get("tick", 0))
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.egg = message.get("egg")
                 self.snapshot.shrine = message.get("shrine")
                 self.snapshot.enemy = message.get("enemy")
+                self.snapshot.final_bloom = message.get("final_bloom")
                 self.snapshot.objective_text = str(message.get("objective_text", ""))
             elif message_type == "disconnected":
                 self.connected = False
@@ -225,6 +237,7 @@ class EasterClientApp:
         playfield_rect = pg.Rect(32, 96, WINDOW_WIDTH - 64, WINDOW_HEIGHT - 132)
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
+        self._draw_map_geometry(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
             shrine_x, shrine_y = self._screen_point(
@@ -235,6 +248,18 @@ class EasterClientApp:
             )
             pg.draw.circle(screen, SHRINE_COLOR, (shrine_x, shrine_y), 26)
             pg.draw.circle(screen, (255, 247, 215), (shrine_x, shrine_y), 42, width=3)
+
+        if self.snapshot.final_bloom:
+            bloom_x, bloom_y = self._screen_point(
+                self.snapshot.final_bloom["x"],
+                self.snapshot.final_bloom["y"],
+                playfield_rect,
+                camera_rect,
+            )
+            bloom_radius = int(self.snapshot.final_bloom["radius"] * CAMERA_ZOOM)
+            bloom_color = HEART_BLOOM_RESTORED_COLOR if self.snapshot.final_bloom.get("restored") else HEART_BLOOM_COLOR
+            pg.draw.circle(screen, bloom_color, (bloom_x, bloom_y), bloom_radius + 4)
+            pg.draw.circle(screen, (255, 245, 235), (bloom_x, bloom_y), bloom_radius, width=3)
 
         if self.snapshot.egg and not self.snapshot.egg.get("collected", False):
             egg_x, egg_y = self._screen_point(
@@ -413,6 +438,41 @@ class EasterClientApp:
             if player["id"] == self.player_id:
                 return player
         return None
+
+    def _draw_map_geometry(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        if self.current_map is None:
+            return
+
+        for rect in self.current_map.collision_rects:
+            screen_rect = self._screen_rect(rect.x, rect.y, rect.width, rect.height, playfield_rect, camera_rect)
+            if screen_rect is None:
+                continue
+            pg.draw.rect(screen, HEDGE_COLOR, screen_rect, border_radius=12)
+            accent_rect = screen_rect.inflate(-8, -8)
+            if accent_rect.width > 0 and accent_rect.height > 0:
+                pg.draw.rect(screen, HEDGE_ACCENT_COLOR, accent_rect, border_radius=10)
+
+    def _screen_rect(
+        self,
+        world_x: float,
+        world_y: float,
+        width: float,
+        height: float,
+        playfield_rect: pg.Rect,
+        camera_rect: pg.Rect,
+    ) -> pg.Rect | None:
+        left = int(playfield_rect.left + (world_x - camera_rect.left) * CAMERA_ZOOM)
+        top = int(playfield_rect.top + (world_y - camera_rect.top) * CAMERA_ZOOM)
+        rect = pg.Rect(left, top, int(width * CAMERA_ZOOM), int(height * CAMERA_ZOOM))
+        clipped = rect.clip(playfield_rect)
+        if clipped.width <= 0 or clipped.height <= 0:
+            return None
+        return clipped
+
+    def _load_map(self, map_id: str) -> None:
+        if self.current_map is not None and self.current_map.map_id == map_id:
+            return
+        self.current_map = load_map(map_id)
 
     def _draw_match_overlay(
         self,

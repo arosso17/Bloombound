@@ -94,3 +94,23 @@ class EnemyState:
             "y": round(self.y, 2),
             "radius": self.radius,
         }
+
+
+@dataclass
+class FinalBloomState:
+    bloom_id: str
+    x: float
+    y: float
+    radius: int = 24
+    interact_radius: int = 68
+    restored: bool = False
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.bloom_id,
+            "x": round(self.x, 2),
+            "y": round(self.y, 2),
+            "radius": self.radius,
+            "interact_radius": self.interact_radius,
+            "restored": self.restored,
+        }
