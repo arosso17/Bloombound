@@ -76,3 +76,21 @@ class ShrineState:
             "interact_radius": self.interact_radius,
             "revive_radius": self.revive_radius,
         }
+
+
+@dataclass
+class EnemyState:
+    enemy_id: str
+    x: float
+    y: float
+    radius: int = 18
+    speed: float = 150.0
+    damage_per_second: float = 40.0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.enemy_id,
+            "x": round(self.x, 2),
+            "y": round(self.y, 2),
+            "radius": self.radius,
+        }

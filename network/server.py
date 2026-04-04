@@ -127,9 +127,10 @@ class GameServer:
             self._drain_messages()
             if self.state.match_phase == "playing":
                 self.state.update(tick_duration)
-                self._broadcast(self.state.build_snapshot())
-            else:
+            if self.state.match_phase == "lobby":
                 self._broadcast(self.state.build_lobby_state())
+            else:
+                self._broadcast(self.state.build_snapshot())
             elapsed = time.perf_counter() - start
             time.sleep(max(0.0, tick_duration - elapsed))
 
@@ -164,7 +165,7 @@ class GameServer:
                 self.state.apply_input(player_id, message)
             elif message.get("type") == "start_game":
                 if self.state.start_match(player_id):
-                    self._broadcast(self.state.build_lobby_state())
+                    self._broadcast(self.state.build_snapshot())
 
     def _broadcast(self, message: dict) -> None:
         with self.sessions_lock:

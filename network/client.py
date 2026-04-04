@@ -20,6 +20,12 @@ EGG_COLOR = (244, 160, 177)
 TEXT_COLOR = (48, 58, 64)
 SPIRIT_COLOR = (188, 234, 255)
 SELF_RING_COLOR = (40, 40, 40)
+ENEMY_COLOR = (77, 104, 72)
+ENEMY_CORE_COLOR = (154, 195, 140)
+HEALTH_BG_COLOR = (233, 222, 212)
+HEALTH_FILL_COLOR = (120, 191, 104)
+LOSS_COLOR = (125, 76, 76)
+WIN_COLOR = (89, 143, 84)
 
 
 @dataclass
@@ -31,6 +37,8 @@ class ClientSnapshot:
     players: list[dict] | None = None
     egg: dict | None = None
     shrine: dict | None = None
+    enemy: dict | None = None
+    objective_text: str = ""
 
 
 class NetworkClient:
@@ -155,12 +163,20 @@ class EasterClientApp:
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.egg = message.get("egg")
                 self.snapshot.shrine = message.get("shrine")
+                self.snapshot.enemy = message.get("enemy")
+                self.snapshot.objective_text = str(message.get("objective_text", ""))
             elif message_type == "disconnected":
                 self.connected = False
                 self.connection_closed = True
 
     def _handle_keydown(self, event: pg.event.Event) -> None:
-        if not self.connected or self.snapshot.match_phase != "lobby":
+        if not self.connected:
+            return
+        if self.snapshot.match_phase in {"won", "lost"}:
+            if event.key == pg.K_RETURN and self.is_host and self.can_start:
+                self.network.send({"type": "start_game"})
+            return
+        if self.snapshot.match_phase != "lobby":
             return
         if event.key == pg.K_BACKSPACE:
             self.name_input = self.name_input[:-1]
@@ -232,6 +248,18 @@ class EasterClientApp:
             )
             pg.draw.ellipse(screen, EGG_COLOR, pg.Rect(egg_x - 10, egg_y - 14, 20, 28))
 
+        if self.snapshot.enemy:
+            enemy_x, enemy_y = self._screen_point(
+                self.snapshot.enemy["x"],
+                self.snapshot.enemy["y"],
+                playfield_rect,
+                scale_x,
+                scale_y,
+            )
+            enemy_radius = int(self.snapshot.enemy["radius"] * min(scale_x, scale_y))
+            pg.draw.circle(screen, ENEMY_COLOR, (enemy_x, enemy_y), enemy_radius + 3)
+            pg.draw.circle(screen, ENEMY_CORE_COLOR, (enemy_x, enemy_y), max(4, enemy_radius - 4))
+
         for player in self.snapshot.players or []:
             px, py = self._screen_point(player["x"], player["y"], playfield_rect, scale_x, scale_y)
             color = tuple(player["color"])
@@ -249,10 +277,22 @@ class EasterClientApp:
                 TEXT_COLOR,
             )
             screen.blit(name_surf, (px - name_surf.get_width() // 2, py - radius - 24))
+            if player["state"] == "alive":
+                bar_width = 42
+                bar_height = 6
+                health_ratio = max(0.0, min(1.0, player["health"] / max(1, player["max_health"])))
+                bar_rect = pg.Rect(px - bar_width // 2, py + radius + 10, bar_width, bar_height)
+                pg.draw.rect(screen, HEALTH_BG_COLOR, bar_rect, border_radius=4)
+                pg.draw.rect(
+                    screen,
+                    HEALTH_FILL_COLOR,
+                    pg.Rect(bar_rect.left, bar_rect.top, int(bar_width * health_ratio), bar_height),
+                    border_radius=4,
+                )
 
         title = font.render("Bloombound Networking Prototype", True, TEXT_COLOR)
         if self.connected:
-            status_text = "Move: WASD | Interact: E at shrine | Debug spirit: K | Collect the egg first"
+            status_text = self.snapshot.objective_text or "Move: WASD | Interact: E at shrine | Debug spirit: K"
         else:
             status_text = f"Connecting to {self.network.host}:{self.network.port}..."
         status = small_font.render(status_text, True, TEXT_COLOR)
@@ -260,6 +300,8 @@ class EasterClientApp:
         screen.blit(title, (32, 28))
         screen.blit(status, (32, 58))
         screen.blit(tick_text, (WINDOW_WIDTH - 180, 28))
+        if self.snapshot.match_phase in {"won", "lost"}:
+            self._draw_match_overlay(screen, font, small_font, playfield_rect)
 
     def _draw_lobby(self, screen: pg.Surface, font: pg.font.Font, small_font: pg.font.Font) -> None:
         screen.fill(BACKGROUND_COLOR)
@@ -346,6 +388,34 @@ class EasterClientApp:
             int(playfield_rect.left + world_x * scale_x),
             int(playfield_rect.top + world_y * scale_y),
         )
+
+    def _draw_match_overlay(
+        self,
+        screen: pg.Surface,
+        font: pg.font.Font,
+        small_font: pg.font.Font,
+        playfield_rect: pg.Rect,
+    ) -> None:
+        overlay = pg.Surface((playfield_rect.width, playfield_rect.height), pg.SRCALPHA)
+        overlay.fill((24, 30, 24, 124))
+        screen.blit(overlay, playfield_rect.topleft)
+
+        if self.snapshot.match_phase == "won":
+            title_text = "Heart Garden Restored"
+            title_color = WIN_COLOR
+        else:
+            title_text = "The Bramble Took Over"
+            title_color = LOSS_COLOR
+
+        title = font.render(title_text, True, title_color)
+        prompt = small_font.render(self.snapshot.objective_text, True, (246, 244, 238))
+        controls = small_font.render("Host can press Enter to restart.", True, (246, 244, 238))
+
+        center_x = playfield_rect.centerx
+        center_y = playfield_rect.centery
+        screen.blit(title, (center_x - title.get_width() // 2, center_y - 32))
+        screen.blit(prompt, (center_x - prompt.get_width() // 2, center_y + 2))
+        screen.blit(controls, (center_x - controls.get_width() // 2, center_y + 28))
 
 
 def run_client(host: str, port: int, name: str) -> None:
