@@ -47,6 +47,18 @@ class MapEditor:
         self.map_name_var = tk.StringVar(value=self.map_data["name"])
         self.world_width_var = tk.StringVar(value=str(self.map_data["world"]["width"]))
         self.world_height_var = tk.StringVar(value=str(self.map_data["world"]["height"]))
+        self.layer_visibility_vars: dict[str, tk.BooleanVar] = {
+            "collision_rects": tk.BooleanVar(value=True),
+            "decorations": tk.BooleanVar(value=True),
+            "player_spawns": tk.BooleanVar(value=True),
+            "egg_spawns": tk.BooleanVar(value=True),
+            "restoration_zones": tk.BooleanVar(value=True),
+            "hazard_zones": tk.BooleanVar(value=True),
+            "enemy_spawns": tk.BooleanVar(value=True),
+            "patrol_points": tk.BooleanVar(value=True),
+            "shrine": tk.BooleanVar(value=True),
+            "final_bloom": tk.BooleanVar(value=True),
+        }
 
         self.property_vars: dict[str, tk.StringVar] = {
             "id": tk.StringVar(value=""),
@@ -188,11 +200,34 @@ class MapEditor:
 
         ttk.Checkbutton(parent, text="Snap To Grid", variable=self.snap_to_grid_var).grid(row=6, column=0, sticky="w", pady=(10, 4))
 
-        ttk.Label(parent, text="Objects").grid(row=7, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Layers").grid(row=7, column=0, sticky="w", pady=(12, 4))
+        layers_frame = ttk.Frame(parent)
+        layers_frame.grid(row=8, column=0, sticky="ew")
+        layer_specs = [
+            ("collision_rects", "Collision"),
+            ("decorations", "Decorations"),
+            ("player_spawns", "Player Spawns"),
+            ("egg_spawns", "Eggs"),
+            ("restoration_zones", "Restores"),
+            ("hazard_zones", "Hazards"),
+            ("enemy_spawns", "Enemies"),
+            ("patrol_points", "Patrols"),
+            ("shrine", "Shrine"),
+            ("final_bloom", "Final Bloom"),
+        ]
+        for index, (section, label) in enumerate(layer_specs):
+            ttk.Checkbutton(
+                layers_frame,
+                text=label,
+                variable=self.layer_visibility_vars[section],
+                command=self._draw_canvas,
+            ).grid(row=index, column=0, sticky="w", pady=1)
+
+        ttk.Label(parent, text="Objects").grid(row=9, column=0, sticky="w", pady=(12, 4))
         self.object_listbox = tk.Listbox(parent, height=20, exportselection=False)
-        self.object_listbox.grid(row=8, column=0, sticky="nsew")
+        self.object_listbox.grid(row=10, column=0, sticky="nsew")
         self.object_listbox.bind("<<ListboxSelect>>", lambda _event: self._load_selected_object_from_list())
-        parent.rowconfigure(8, weight=1)
+        parent.rowconfigure(10, weight=1)
 
     def _build_canvas(self, parent: ttk.Frame) -> None:
         ttk.Label(parent, text="Map").grid(row=0, column=0, sticky="w")
@@ -647,6 +682,14 @@ class MapEditor:
     def _sync_map_metadata(self) -> None:
         self.apply_map_properties()
 
+    def _layer_visible(self, section: str) -> bool:
+        variable = self.layer_visibility_vars.get(section)
+        return True if variable is None else bool(variable.get())
+
+    def _ensure_layer_visible(self, section: str) -> None:
+        if section in self.layer_visibility_vars:
+            self.layer_visibility_vars[section].set(True)
+
     def _parse_float_var(self, key: str) -> float:
         value = self.property_vars[key].get().strip()
         if value == "":
@@ -668,25 +711,35 @@ class MapEditor:
         right, bottom = self._world_to_screen(world_w, world_h)
         self.canvas.create_rectangle(left, top, right, bottom, outline="#6f6759", width=2, fill="#f5efde")
 
-        for index, rect in enumerate(self.map_data["collision_rects"]):
-            self._draw_collision_rect(index, rect)
-        for index, decoration in enumerate(self.map_data["decorations"]):
-            self._draw_decoration_marker(index, decoration)
-        for index, zone in enumerate(self.map_data["hazard_zones"]):
-            self._draw_radius_marker(zone, "#b56161", "HZ")
-        for index, zone in enumerate(self.map_data["restoration_zones"]):
-            self._draw_radius_marker(zone, "#73ab73", "RZ")
-        for index, spawn in enumerate(self.map_data["player_spawns"]):
-            self._draw_point_marker(spawn["x"], spawn["y"], "#4f89ff", "P")
-        for index, point in enumerate(self.map_data["patrol_points"]):
-            self._draw_point_marker(point["x"], point["y"], "#8b6bd3", "PT")
-        for index, spawn in enumerate(self.map_data["egg_spawns"]):
-            egg_fill = "#88cfa9" if spawn.get("egg_type") == "restoration" else "#f28bb1"
-            self._draw_point_marker(spawn["x"], spawn["y"], egg_fill, "E")
-        self._draw_radius_marker(self.map_data["shrine"], "#ffd56c", "S")
-        for index, enemy in enumerate(self.map_data["enemy_spawns"]):
-            self._draw_radius_marker(enemy, "#6b8a63", "B")
-        self._draw_radius_marker(self.map_data["final_bloom"], "#ffb6c7", "H")
+        if self._layer_visible("collision_rects"):
+            for index, rect in enumerate(self.map_data["collision_rects"]):
+                self._draw_collision_rect(index, rect)
+        if self._layer_visible("decorations"):
+            for index, decoration in enumerate(self.map_data["decorations"]):
+                self._draw_decoration_marker(index, decoration)
+        if self._layer_visible("hazard_zones"):
+            for index, zone in enumerate(self.map_data["hazard_zones"]):
+                self._draw_radius_marker(zone, "#b56161", "HZ")
+        if self._layer_visible("restoration_zones"):
+            for index, zone in enumerate(self.map_data["restoration_zones"]):
+                self._draw_radius_marker(zone, "#73ab73", "RZ")
+        if self._layer_visible("player_spawns"):
+            for index, spawn in enumerate(self.map_data["player_spawns"]):
+                self._draw_point_marker(spawn["x"], spawn["y"], "#4f89ff", "P")
+        if self._layer_visible("patrol_points"):
+            for index, point in enumerate(self.map_data["patrol_points"]):
+                self._draw_point_marker(point["x"], point["y"], "#8b6bd3", "PT")
+        if self._layer_visible("egg_spawns"):
+            for index, spawn in enumerate(self.map_data["egg_spawns"]):
+                egg_fill = "#88cfa9" if spawn.get("egg_type") == "restoration" else "#f28bb1"
+                self._draw_point_marker(spawn["x"], spawn["y"], egg_fill, "E")
+        if self._layer_visible("shrine"):
+            self._draw_radius_marker(self.map_data["shrine"], "#ffd56c", "S")
+        if self._layer_visible("enemy_spawns"):
+            for index, enemy in enumerate(self.map_data["enemy_spawns"]):
+                self._draw_radius_marker(enemy, "#6b8a63", "B")
+        if self._layer_visible("final_bloom"):
+            self._draw_radius_marker(self.map_data["final_bloom"], "#ffb6c7", "H")
 
         if self.selected_ref is not None:
             self._draw_selection_overlay(self.selected_ref)
@@ -760,6 +813,8 @@ class MapEditor:
         if target is None:
             return
         section, _, obj = target
+        if not self._layer_visible(section):
+            return
 
         if section == "collision_rects":
             bbox = self._collision_bbox(obj)
@@ -794,16 +849,26 @@ class MapEditor:
 
     def _iter_hit_test_objects(self) -> list[tuple[tuple[str, int | None], dict]]:
         objects: list[tuple[tuple[str, int | None], dict]] = []
-        objects.extend((("collision_rects", index), rect) for index, rect in enumerate(self.map_data["collision_rects"]))
-        objects.extend((("decorations", index), decoration) for index, decoration in enumerate(self.map_data["decorations"]))
-        objects.extend((("hazard_zones", index), zone) for index, zone in enumerate(self.map_data["hazard_zones"]))
-        objects.extend((("restoration_zones", index), zone) for index, zone in enumerate(self.map_data["restoration_zones"]))
-        objects.extend((("player_spawns", index), spawn) for index, spawn in enumerate(self.map_data["player_spawns"]))
-        objects.extend((("patrol_points", index), point) for index, point in enumerate(self.map_data["patrol_points"]))
-        objects.extend((("egg_spawns", index), spawn) for index, spawn in enumerate(self.map_data["egg_spawns"]))
-        objects.append((("shrine", None), self.map_data["shrine"]))
-        objects.extend((("enemy_spawns", index), enemy) for index, enemy in enumerate(self.map_data["enemy_spawns"]))
-        objects.append((("final_bloom", None), self.map_data["final_bloom"]))
+        if self._layer_visible("collision_rects"):
+            objects.extend((("collision_rects", index), rect) for index, rect in enumerate(self.map_data["collision_rects"]))
+        if self._layer_visible("decorations"):
+            objects.extend((("decorations", index), decoration) for index, decoration in enumerate(self.map_data["decorations"]))
+        if self._layer_visible("hazard_zones"):
+            objects.extend((("hazard_zones", index), zone) for index, zone in enumerate(self.map_data["hazard_zones"]))
+        if self._layer_visible("restoration_zones"):
+            objects.extend((("restoration_zones", index), zone) for index, zone in enumerate(self.map_data["restoration_zones"]))
+        if self._layer_visible("player_spawns"):
+            objects.extend((("player_spawns", index), spawn) for index, spawn in enumerate(self.map_data["player_spawns"]))
+        if self._layer_visible("patrol_points"):
+            objects.extend((("patrol_points", index), point) for index, point in enumerate(self.map_data["patrol_points"]))
+        if self._layer_visible("egg_spawns"):
+            objects.extend((("egg_spawns", index), spawn) for index, spawn in enumerate(self.map_data["egg_spawns"]))
+        if self._layer_visible("shrine"):
+            objects.append((("shrine", None), self.map_data["shrine"]))
+        if self._layer_visible("enemy_spawns"):
+            objects.extend((("enemy_spawns", index), enemy) for index, enemy in enumerate(self.map_data["enemy_spawns"]))
+        if self._layer_visible("final_bloom"):
+            objects.append((("final_bloom", None), self.map_data["final_bloom"]))
         return objects
 
     def _handle_at_screen_point(self, ref: tuple[str, int | None], screen_x: float, screen_y: float) -> str | None:
@@ -889,6 +954,7 @@ class MapEditor:
 
     def _create_object_with_tool(self, tool: str, world_x: float, world_y: float) -> None:
         if tool == "collision":
+            self._ensure_layer_visible("collision_rects")
             new_obj = {
                 "rect_id": self._next_id("collision_rects", "rect_id", "rect"),
                 "x": world_x,
@@ -900,6 +966,7 @@ class MapEditor:
             self._select_object_ref(("collision_rects", len(self.map_data["collision_rects"]) - 1))
             return
         if tool == "decoration":
+            self._ensure_layer_visible("decorations")
             self.map_data["decorations"].append(
                 {
                     "decoration_id": self._next_id("decorations", "decoration_id", "decoration"),
@@ -912,6 +979,7 @@ class MapEditor:
             self._select_object_ref(("decorations", len(self.map_data["decorations"]) - 1))
             return
         if tool == "patrol_point":
+            self._ensure_layer_visible("patrol_points")
             enemy_id = self.map_data["enemy_spawns"][0]["enemy_id"] if self.map_data["enemy_spawns"] else "enemy_1"
             self.map_data["patrol_points"].append(
                 {
@@ -924,10 +992,12 @@ class MapEditor:
             self._select_object_ref(("patrol_points", len(self.map_data["patrol_points"]) - 1))
             return
         if tool == "player_spawn":
+            self._ensure_layer_visible("player_spawns")
             self.map_data["player_spawns"].append({"x": world_x, "y": world_y})
             self._select_object_ref(("player_spawns", len(self.map_data["player_spawns"]) - 1))
             return
         if tool == "egg_spawn":
+            self._ensure_layer_visible("egg_spawns")
             self.map_data["egg_spawns"].append(
                 {
                     "spawn_id": self._next_id("egg_spawns", "spawn_id", "egg"),
@@ -940,6 +1010,7 @@ class MapEditor:
             self._select_object_ref(("egg_spawns", len(self.map_data["egg_spawns"]) - 1))
             return
         if tool == "restoration_zone":
+            self._ensure_layer_visible("restoration_zones")
             self.map_data["restoration_zones"].append(
                 {
                     "zone_id": self._next_id("restoration_zones", "zone_id", "restore"),
@@ -954,6 +1025,7 @@ class MapEditor:
             self._select_object_ref(("restoration_zones", len(self.map_data["restoration_zones"]) - 1))
             return
         if tool == "hazard_zone":
+            self._ensure_layer_visible("hazard_zones")
             cleared_by_zone_id = self.map_data["restoration_zones"][0]["zone_id"] if self.map_data["restoration_zones"] else ""
             self.map_data["hazard_zones"].append(
                 {
@@ -969,6 +1041,7 @@ class MapEditor:
             self._select_object_ref(("hazard_zones", len(self.map_data["hazard_zones"]) - 1))
             return
         if tool == "enemy_spawn":
+            self._ensure_layer_visible("enemy_spawns")
             self.map_data["enemy_spawns"].append(
                 {
                     "enemy_id": self._next_id("enemy_spawns", "enemy_id", "enemy"),
@@ -985,11 +1058,13 @@ class MapEditor:
             self._select_object_ref(("enemy_spawns", len(self.map_data["enemy_spawns"]) - 1))
             return
         if tool == "shrine":
+            self._ensure_layer_visible("shrine")
             self.map_data["shrine"]["x"] = world_x
             self.map_data["shrine"]["y"] = world_y
             self._select_object_ref(("shrine", None))
             return
         if tool == "final_bloom":
+            self._ensure_layer_visible("final_bloom")
             self.map_data["final_bloom"]["x"] = world_x
             self.map_data["final_bloom"]["y"] = world_y
             self._select_object_ref(("final_bloom", None))

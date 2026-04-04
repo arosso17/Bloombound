@@ -1,0 +1,131 @@
+{
+  "asset_id": "restored_flower",
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "shapes": [
+    {
+      "kind": "line",
+      "x": 48.0,
+      "y": 45.53,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 12.0,
+      "x2": 48.0,
+      "y2": 95.41,
+      "fill": null,
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 20.08,
+      "y": 22.77,
+      "width": 31.97,
+      "height": 21.1,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        224,
+        152,
+        235
+      ],
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 44.1,
+      "y": 22.76,
+      "width": 31.97,
+      "height": 21.1,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        194,
+        114,
+        194
+      ],
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 36.95,
+      "y": 6.38,
+      "width": 20.45,
+      "height": 29.18,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        224,
+        152,
+        235
+      ],
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 37.56,
+      "y": 30.87,
+      "width": 20.45,
+      "height": 29.18,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        194,
+        114,
+        194
+      ],
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 48.0,
+      "y": 33.16,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        253,
+        248,
+        28
+      ],
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 2
+    }
+  ]
+}

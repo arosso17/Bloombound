@@ -1,10 +1,91 @@
 {
   "asset_id": "bramble_enemy",
-  "canvas": { "width": 60, "height": 60 },
+  "canvas": {
+    "width": 60,
+    "height": 60
+  },
   "shapes": [
-    { "kind": "circle", "x": 30, "y": 30, "radius": 20, "fill": [77, 104, 72] },
-    { "kind": "circle", "x": 30, "y": 30, "radius": 13, "fill": [154, 195, 140] },
-    { "kind": "line", "x": 18, "y": 18, "x2": 42, "y2": 42, "outline": [58, 79, 54], "outline_width": 4 },
-    { "kind": "line", "x": 42, "y": 18, "x2": 18, "y2": 42, "outline": [58, 79, 54], "outline_width": 4 }
+    {
+      "kind": "circle",
+      "x": 30,
+      "y": 30,
+      "radius": 20,
+      "fill": [
+        77,
+        104,
+        72
+      ]
+    },
+    {
+      "kind": "circle",
+      "x": 30,
+      "y": 30,
+      "radius": 13,
+      "fill": [
+        154,
+        195,
+        140
+      ]
+    },
+    {
+      "kind": "line",
+      "x": 17.48,
+      "y": 32.68,
+      "x2": 40.95,
+      "y2": 40.05,
+      "outline": [
+        58,
+        79,
+        54
+      ],
+      "outline_width": 4
+    },
+    {
+      "kind": "line",
+      "x": 42.21,
+      "y": 32.54,
+      "x2": 18.0,
+      "y2": 40.5,
+      "outline": [
+        58,
+        79,
+        54
+      ],
+      "outline_width": 4
+    },
+    {
+      "kind": "circle",
+      "x": 24.14,
+      "y": 23.53,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 3.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        58,
+        79,
+        54
+      ],
+      "outline": null,
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 34.21,
+      "y": 23.83,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 3.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        58,
+        79,
+        54
+      ],
+      "outline": null,
+      "outline_width": 2
+    }
   ]
 }
