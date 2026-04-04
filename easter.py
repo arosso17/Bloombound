@@ -15,11 +15,13 @@ def build_parser() -> argparse.ArgumentParser:
     server_parser.add_argument("--tick-rate", type=int, default=30)
     server_parser.add_argument("--expected-players", type=int, default=2)
     server_parser.add_argument("--map-id", default="heart_garden_slice")
+    server_parser.add_argument("--net-debug", action="store_true")
 
     client_parser = subparsers.add_parser("client", help="Run a pygame client")
     client_parser.add_argument("--host", default="127.0.0.1")
     client_parser.add_argument("--port", type=int, default=5050)
     client_parser.add_argument("--name", default="Player")
+    client_parser.add_argument("--net-debug", action="store_true")
 
     host_parser = subparsers.add_parser("host", help="Run a local server and client together")
     host_parser.add_argument("--port", type=int, default=5050)
@@ -27,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     host_parser.add_argument("--expected-players", type=int, default=2)
     host_parser.add_argument("--name", default="Host")
     host_parser.add_argument("--map-id", default="heart_garden_slice")
+    host_parser.add_argument("--net-debug", action="store_true")
 
     return parser
 
@@ -41,11 +44,12 @@ def main() -> None:
             tick_rate=args.tick_rate,
             expected_players=args.expected_players,
             map_id=args.map_id,
+            net_debug=args.net_debug,
         ).run_forever()
         return
 
     if args.mode == "client":
-        run_client(args.host, args.port, args.name)
+        run_client(args.host, args.port, args.name, net_debug=args.net_debug)
         return
 
     if args.mode == "host":
@@ -55,12 +59,13 @@ def main() -> None:
             tick_rate=args.tick_rate,
             expected_players=args.expected_players,
             map_id=args.map_id,
+            net_debug=args.net_debug,
         )
         server.start()
         print(f"Hosting on 127.0.0.1:{args.port}")
         try:
             time.sleep(0.2)
-            run_client("127.0.0.1", args.port, args.name)
+            run_client("127.0.0.1", args.port, args.name, net_debug=args.net_debug)
         finally:
             server.stop()
 

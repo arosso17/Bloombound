@@ -3,6 +3,7 @@ from __future__ import annotations
 import queue
 import socket
 import threading
+import time
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -13,6 +14,7 @@ from gameplay.map_loader import load_map
 from gameplay.map_types import MapDefinition
 from gameplay.state import ALIVE_SPEED, PLAYER_COLORS, SPIRIT_SPEED
 from gameplay.visual_assets import load_visual_asset, render_visual_asset
+from network.diagnostics import ClientDiagnostics
 from network.shared import read_messages_forever, safe_close, send_message
 
 
@@ -111,7 +113,7 @@ class NetworkClient:
 
 
 class EasterClientApp:
-    def __init__(self, host: str, port: int, name: str) -> None:
+    def __init__(self, host: str, port: int, name: str, net_debug: bool = False) -> None:
         self.network = NetworkClient(host, port, name)
         self.player_id = ""
         self.name_input = name[:24]
@@ -130,6 +132,9 @@ class EasterClientApp:
         self.current_move_y = 0.0
         self.render_positions: dict[tuple[str, str], tuple[float, float]] = {}
         self.local_predicted_player: dict | None = None
+        self.diagnostics = ClientDiagnostics(enabled=net_debug)
+        self.next_ping_at = 0.0
+        self.ping_nonce = 0
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
             "egg": load_visual_asset("egg"),
@@ -157,6 +162,7 @@ class EasterClientApp:
         running = True
         while running:
             dt = clock.tick(60) / 1000.0
+            self.diagnostics.record_frame(dt)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
@@ -172,8 +178,10 @@ class EasterClientApp:
             else:
                 self.current_move_x = 0.0
                 self.current_move_y = 0.0
+            self._maybe_send_ping()
             self._draw(screen, font, small_font)
             pg.display.flip()
+            self.diagnostics.maybe_emit()
 
             if self.connection_closed:
                 running = False
@@ -184,6 +192,7 @@ class EasterClientApp:
     def _handle_network_messages(self) -> None:
         for message in self.network.poll_messages():
             message_type = message.get("type")
+            self.diagnostics.record_message(str(message_type or "unknown"))
             if message_type == "welcome":
                 self.player_id = str(message["player_id"])
                 self._load_map(str(message.get("map_id", "heart_garden_slice")))
@@ -217,7 +226,10 @@ class EasterClientApp:
                 self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
                 self.snapshot.objective_text = str(message.get("objective_text", ""))
+                self.diagnostics.record_world_snapshot(self.snapshot.tick)
                 self._reconcile_render_state()
+            elif message_type == "pong":
+                self._handle_pong(message)
             elif message_type == "disconnected":
                 self.connected = False
                 self.connection_closed = True
@@ -259,6 +271,7 @@ class EasterClientApp:
         self.current_move_x = move_x
         self.current_move_y = move_y
         self.input_seq += 1
+        self.diagnostics.record_input_sent()
         self.network.send(
             {
                 "type": "player_input",
@@ -275,6 +288,12 @@ class EasterClientApp:
 
         for enemy in self.snapshot.enemies or []:
             key = ("enemy", str(enemy["id"]))
+            current_position = self.render_positions.get(key)
+            if current_position is not None:
+                self.diagnostics.record_enemy_error(
+                    ((current_position[0] - float(enemy["x"])) ** 2 + (current_position[1] - float(enemy["y"])) ** 2)
+                    ** 0.5
+                )
             self.render_positions.setdefault(key, (float(enemy["x"]), float(enemy["y"])))
             active_keys.add(key)
 
@@ -284,6 +303,12 @@ class EasterClientApp:
                 self._reconcile_local_prediction(player)
                 continue
             key = ("player", player_id)
+            current_position = self.render_positions.get(key)
+            if current_position is not None:
+                self.diagnostics.record_remote_player_error(
+                    ((current_position[0] - float(player["x"])) ** 2 + (current_position[1] - float(player["y"])) ** 2)
+                    ** 0.5
+                )
             self.render_positions.setdefault(key, (float(player["x"]), float(player["y"])))
             active_keys.add(key)
 
@@ -304,6 +329,7 @@ class EasterClientApp:
 
         predicted_x = float(self.local_predicted_player.get("x", server_x))
         predicted_y = float(self.local_predicted_player.get("y", server_y))
+        self.diagnostics.record_local_error(((predicted_x - server_x) ** 2 + (predicted_y - server_y) ** 2) ** 0.5)
         if ((predicted_x - server_x) ** 2 + (predicted_y - server_y) ** 2) ** 0.5 > LOCAL_SNAP_DISTANCE:
             predicted_x = server_x
             predicted_y = server_y
@@ -768,6 +794,41 @@ class EasterClientApp:
         screen.blit(prompt, (center_x - prompt.get_width() // 2, center_y + 2))
         screen.blit(controls, (center_x - controls.get_width() // 2, center_y + 28))
 
+    def _maybe_send_ping(self) -> None:
+        if not self.diagnostics.enabled or not self.connected:
+            return
+        now = time.perf_counter()
+        if now < self.next_ping_at:
+            return
+        self.next_ping_at = now + 1.0
+        self.ping_nonce += 1
+        self.network.send(
+            {
+                "type": "ping",
+                "nonce": self.ping_nonce,
+                "client_sent_at": now,
+            }
+        )
 
-def run_client(host: str, port: int, name: str) -> None:
-    EasterClientApp(host, port, name).run()
+    def _handle_pong(self, message: dict) -> None:
+        try:
+            client_sent_at = float(message.get("client_sent_at", 0.0))
+        except (TypeError, ValueError):
+            return
+        if client_sent_at <= 0.0:
+            return
+        now = time.perf_counter()
+        server_turnaround = None
+        try:
+            received_at = float(message.get("server_received_at", 0.0))
+            replied_at = float(message.get("server_replied_at", 0.0))
+        except (TypeError, ValueError):
+            received_at = 0.0
+            replied_at = 0.0
+        if replied_at >= received_at > 0.0:
+            server_turnaround = replied_at - received_at
+        self.diagnostics.record_rtt(now - client_sent_at, server_turnaround)
+
+
+def run_client(host: str, port: int, name: str, net_debug: bool = False) -> None:
+    EasterClientApp(host, port, name, net_debug=net_debug).run()

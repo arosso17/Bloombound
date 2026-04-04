@@ -8,7 +8,8 @@ import uuid
 from dataclasses import dataclass, field
 
 from gameplay.state import GameState
-from network.shared import read_messages_forever, safe_close, send_message
+from network.diagnostics import ServerDiagnostics
+from network.shared import encode_message, read_messages_forever, safe_close, send_message
 
 
 @dataclass
@@ -28,6 +29,7 @@ class GameServer:
         tick_rate: int = 30,
         expected_players: int = 2,
         map_id: str = "heart_garden_slice",
+        net_debug: bool = False,
     ) -> None:
         self.host = host
         self.port = port
@@ -37,10 +39,11 @@ class GameServer:
         self.server_socket: socket.socket | None = None
         self.accept_thread: threading.Thread | None = None
         self.loop_thread: threading.Thread | None = None
-        self.message_queue: queue.Queue[tuple[str, dict]] = queue.Queue()
+        self.message_queue: queue.Queue[tuple[str, dict, float]] = queue.Queue()
         self.disconnect_queue: queue.Queue[str] = queue.Queue()
         self.sessions: dict[str, ClientSession] = {}
         self.sessions_lock = threading.Lock()
+        self.diagnostics = ServerDiagnostics(enabled=net_debug)
 
     def start(self) -> None:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -118,7 +121,7 @@ class GameServer:
         read_messages_forever(
             session.sock,
             should_stop=self.stop_event.is_set,
-            on_message=lambda message: self.message_queue.put((session.player_id, message)),
+            on_message=lambda message: self.message_queue.put((session.player_id, message, time.perf_counter())),
             on_disconnect=lambda: self.disconnect_queue.put(session.player_id),
         )
 
@@ -135,6 +138,16 @@ class GameServer:
             else:
                 self._broadcast(self.state.build_snapshot())
             elapsed = time.perf_counter() - start
+            with self.sessions_lock:
+                session_count = len(self.sessions)
+            self.diagnostics.record_tick(
+                elapsed_seconds=elapsed,
+                session_count=session_count,
+                match_phase=self.state.match_phase,
+                message_queue_size=self.message_queue.qsize(),
+                disconnect_queue_size=self.disconnect_queue.qsize(),
+            )
+            self.diagnostics.maybe_emit()
             time.sleep(max(0.0, tick_duration - elapsed))
 
     def _drain_disconnects(self) -> None:
@@ -152,33 +165,53 @@ class GameServer:
     def _drain_messages(self) -> None:
         while True:
             try:
-                player_id, message = self.message_queue.get_nowait()
+                player_id, message, received_at = self.message_queue.get_nowait()
             except queue.Empty:
                 break
-            if message.get("type") == "join":
+            message_type = str(message.get("type", "unknown"))
+            self.diagnostics.record_message(message_type, max(0.0, time.perf_counter() - received_at))
+            if message_type == "join":
                 requested_name = str(message.get("name", "")).strip()
                 self.state.rename_player(player_id, requested_name)
-            elif message.get("type") == "set_profile":
+            elif message_type == "set_profile":
                 requested_name = str(message.get("name", "")).strip()
                 if requested_name:
                     self.state.rename_player(player_id, requested_name)
                 if "color_index" in message:
                     self.state.set_color(player_id, int(message["color_index"]))
-            elif message.get("type") == "player_input":
+            elif message_type == "player_input":
                 self.state.apply_input(player_id, message)
-            elif message.get("type") == "start_game":
+            elif message_type == "start_game":
                 if self.state.start_match(player_id):
                     self._broadcast(self.state.build_snapshot())
+            elif message_type == "ping":
+                session = self._get_session(player_id)
+                if session is not None:
+                    pong = {
+                        "type": "pong",
+                        "nonce": message.get("nonce"),
+                        "client_sent_at": message.get("client_sent_at"),
+                        "server_received_at": received_at,
+                        "server_replied_at": time.perf_counter(),
+                    }
+                    self.diagnostics.record_broadcast("pong", len(encode_message(pong)), 1)
+                    self._send_to_session(session, pong)
 
     def _broadcast(self, message: dict) -> None:
         with self.sessions_lock:
             sessions = list(self.sessions.values())
+        payload_size = len(encode_message(message))
+        self.diagnostics.record_broadcast(str(message.get("type", "unknown")), payload_size, len(sessions))
         stale_ids = []
         for session in sessions:
             if not self._send_to_session(session, message):
                 stale_ids.append(session.player_id)
         for player_id in stale_ids:
             self.disconnect_queue.put(player_id)
+
+    def _get_session(self, player_id: str) -> ClientSession | None:
+        with self.sessions_lock:
+            return self.sessions.get(player_id)
 
     def _send_to_session(self, session: ClientSession, message: dict) -> bool:
         try:
