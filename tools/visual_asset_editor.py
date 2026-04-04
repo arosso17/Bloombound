@@ -42,6 +42,11 @@ class VisualAssetEditor:
         self.root.title("Bloombound Visual Asset Editor")
         self.asset = json.loads(json.dumps(DEFAULT_ASSET))
         self.asset_path: Path | None = None
+        self.preview_scale = 1.0
+        self.preview_offset_x = 0.0
+        self.preview_offset_y = 0.0
+        self.drag_shape_index: int | None = None
+        self.drag_last_world: tuple[float, float] | None = None
 
         self.asset_id_var = tk.StringVar(value=self.asset["asset_id"])
         self.canvas_width_var = tk.StringVar(value=str(self.asset["canvas"]["width"]))
@@ -150,6 +155,10 @@ class VisualAssetEditor:
         ttk.Label(parent, text="Preview").grid(row=0, column=0, sticky="w")
         self.preview_canvas = tk.Canvas(parent, width=640, height=640, background="#ede7d8", highlightthickness=1, highlightbackground="#a9a18f")
         self.preview_canvas.grid(row=1, column=0, sticky="nsew", pady=(8, 0))
+        self.preview_canvas.bind("<Button-1>", self.on_preview_press)
+        self.preview_canvas.bind("<B1-Motion>", self.on_preview_drag)
+        self.preview_canvas.bind("<ButtonRelease-1>", self.on_preview_release)
+        self.preview_canvas.bind("<Configure>", lambda _event: self._draw_preview())
 
     def selected_shape_index(self) -> int | None:
         selection = self.shape_listbox.curselection()
@@ -160,6 +169,8 @@ class VisualAssetEditor:
     def new_asset(self) -> None:
         self.asset = json.loads(json.dumps(DEFAULT_ASSET))
         self.asset_path = None
+        self.drag_shape_index = None
+        self.drag_last_world = None
         self._refresh_all()
 
     def open_asset(self) -> None:
@@ -172,6 +183,8 @@ class VisualAssetEditor:
             return
         self.asset_path = Path(path)
         self.asset = json.loads(self.asset_path.read_text(encoding="utf-8"))
+        self.drag_shape_index = None
+        self.drag_last_world = None
         self._refresh_all()
 
     def save_asset(self) -> None:
@@ -224,6 +237,8 @@ class VisualAssetEditor:
         if index is None:
             return
         del self.asset["shapes"][index]
+        self.drag_shape_index = None
+        self.drag_last_world = None
         self._refresh_shape_list()
         self._draw_preview()
 
@@ -274,6 +289,7 @@ class VisualAssetEditor:
     def _load_selected_shape(self) -> None:
         index = self.selected_shape_index()
         if index is None or index >= len(self.asset["shapes"]):
+            self._draw_preview()
             return
         shape = self.asset["shapes"][index]
         self.shape_fields["x"].set(str(shape.get("x", 0)))
@@ -286,6 +302,7 @@ class VisualAssetEditor:
         self.shape_fields["outline_width"].set(str(shape.get("outline_width", 0)))
         self.shape_fields["fill"].set(rgb_to_hex(shape.get("fill")))
         self.shape_fields["outline"].set(rgb_to_hex(shape.get("outline")))
+        self._draw_preview()
 
     def _refresh_all(self) -> None:
         self.asset_id_var.set(self.asset["asset_id"])
@@ -334,13 +351,32 @@ class VisualAssetEditor:
             fill="#f8f4ea",
         )
 
-        for shape in self.asset["shapes"]:
-            self._draw_preview_shape(shape, offset_x, offset_y, scale)
+        self.preview_scale = scale
+        self.preview_offset_x = offset_x
+        self.preview_offset_y = offset_y
 
-    def _draw_preview_shape(self, shape: dict, offset_x: float, offset_y: float, scale: float) -> None:
+        for index, shape in enumerate(self.asset["shapes"]):
+            self._draw_preview_shape(shape, offset_x, offset_y, scale, index)
+
+        selected_index = self.selected_shape_index()
+        if selected_index is not None and selected_index < len(self.asset["shapes"]):
+            bbox = self._shape_screen_bbox(self.asset["shapes"][selected_index], offset_x, offset_y, scale)
+            if bbox is not None:
+                self.preview_canvas.create_rectangle(
+                    bbox[0] - 4,
+                    bbox[1] - 4,
+                    bbox[2] + 4,
+                    bbox[3] + 4,
+                    outline="#2f6fed",
+                    width=2,
+                    dash=(6, 4),
+                )
+
+    def _draw_preview_shape(self, shape: dict, offset_x: float, offset_y: float, scale: float, index: int) -> None:
         fill = rgb_to_hex(shape.get("fill"))
         outline = rgb_to_hex(shape.get("outline"))
         outline_width = max(1, int(shape.get("outline_width", 0) * scale)) if shape.get("outline_width", 0) else 1
+        tags = ("shape", f"shape-{index}")
 
         if shape["kind"] == "circle":
             radius = float(shape.get("radius", 0)) * scale
@@ -354,6 +390,7 @@ class VisualAssetEditor:
                 fill=fill,
                 outline=outline,
                 width=outline_width if outline else 0,
+                tags=tags,
             )
             return
 
@@ -371,6 +408,7 @@ class VisualAssetEditor:
                     fill=fill,
                     outline=outline,
                     width=outline_width if outline else 0,
+                    tags=tags,
                 )
             else:
                 self.preview_canvas.create_oval(
@@ -381,6 +419,7 @@ class VisualAssetEditor:
                     fill=fill,
                     outline=outline,
                     width=outline_width if outline else 0,
+                    tags=tags,
                 )
             return
 
@@ -392,7 +431,164 @@ class VisualAssetEditor:
                 offset_y + float(shape.get("y2", 0)) * scale,
                 fill=outline or "#000000",
                 width=outline_width,
+                tags=tags,
             )
+
+    def on_preview_press(self, event: tk.Event) -> None:
+        world_point = self._preview_to_world(event.x, event.y)
+        shape_index = self._shape_at_world_point(*world_point)
+        self._select_shape(shape_index)
+        if shape_index is None:
+            self.drag_shape_index = None
+            self.drag_last_world = None
+            return
+        self.drag_shape_index = shape_index
+        self.drag_last_world = world_point
+
+    def on_preview_drag(self, event: tk.Event) -> None:
+        if self.drag_shape_index is None or self.drag_last_world is None:
+            return
+        if self.drag_shape_index >= len(self.asset["shapes"]):
+            return
+
+        world_x, world_y = self._preview_to_world(event.x, event.y)
+        last_x, last_y = self.drag_last_world
+        delta_x = world_x - last_x
+        delta_y = world_y - last_y
+        if delta_x == 0 and delta_y == 0:
+            return
+
+        shape = self.asset["shapes"][self.drag_shape_index]
+        shape["x"] = round(float(shape.get("x", 0)) + delta_x, 2)
+        shape["y"] = round(float(shape.get("y", 0)) + delta_y, 2)
+        if shape["kind"] == "line":
+            shape["x2"] = round(float(shape.get("x2", 0)) + delta_x, 2)
+            shape["y2"] = round(float(shape.get("y2", 0)) + delta_y, 2)
+
+        self.drag_last_world = (world_x, world_y)
+        self._load_selected_shape()
+
+    def on_preview_release(self, _event: tk.Event) -> None:
+        self.drag_shape_index = None
+        self.drag_last_world = None
+
+    def _select_shape(self, index: int | None) -> None:
+        self.shape_listbox.selection_clear(0, tk.END)
+        if index is None:
+            self._draw_preview()
+            return
+        self.shape_listbox.selection_set(index)
+        self.shape_listbox.activate(index)
+        self._load_selected_shape()
+
+    def _preview_to_world(self, canvas_x: float, canvas_y: float) -> tuple[float, float]:
+        world_x = (canvas_x - self.preview_offset_x) / max(self.preview_scale, 1e-6)
+        world_y = (canvas_y - self.preview_offset_y) / max(self.preview_scale, 1e-6)
+        return world_x, world_y
+
+    def _shape_at_world_point(self, world_x: float, world_y: float) -> int | None:
+        for index in range(len(self.asset["shapes"]) - 1, -1, -1):
+            if self._shape_contains_point(self.asset["shapes"][index], world_x, world_y):
+                return index
+        return None
+
+    def _shape_contains_point(self, shape: dict, world_x: float, world_y: float) -> bool:
+        kind = shape["kind"]
+        if kind == "circle":
+            radius = float(shape.get("radius", 0))
+            delta_x = world_x - float(shape.get("x", 0))
+            delta_y = world_y - float(shape.get("y", 0))
+            return (delta_x * delta_x) + (delta_y * delta_y) <= radius * radius
+
+        if kind == "rect":
+            x = float(shape.get("x", 0))
+            y = float(shape.get("y", 0))
+            width = float(shape.get("width", 0))
+            height = float(shape.get("height", 0))
+            return x <= world_x <= x + width and y <= world_y <= y + height
+
+        if kind == "ellipse":
+            width = float(shape.get("width", 0))
+            height = float(shape.get("height", 0))
+            if width <= 0 or height <= 0:
+                return False
+            center_x = float(shape.get("x", 0)) + width / 2
+            center_y = float(shape.get("y", 0)) + height / 2
+            norm_x = (world_x - center_x) / (width / 2)
+            norm_y = (world_y - center_y) / (height / 2)
+            return (norm_x * norm_x) + (norm_y * norm_y) <= 1.0
+
+        if kind == "line":
+            return self._point_near_line(
+                world_x,
+                world_y,
+                float(shape.get("x", 0)),
+                float(shape.get("y", 0)),
+                float(shape.get("x2", 0)),
+                float(shape.get("y2", 0)),
+                tolerance=max(4.0, float(shape.get("outline_width", 0)) + 2.0),
+            )
+
+        return False
+
+    def _point_near_line(
+        self,
+        point_x: float,
+        point_y: float,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
+        *,
+        tolerance: float,
+    ) -> bool:
+        delta_x = x2 - x1
+        delta_y = y2 - y1
+        length_squared = (delta_x * delta_x) + (delta_y * delta_y)
+        if length_squared == 0:
+            return ((point_x - x1) ** 2 + (point_y - y1) ** 2) <= tolerance * tolerance
+
+        projection = ((point_x - x1) * delta_x + (point_y - y1) * delta_y) / length_squared
+        projection = max(0.0, min(1.0, projection))
+        nearest_x = x1 + projection * delta_x
+        nearest_y = y1 + projection * delta_y
+        return ((point_x - nearest_x) ** 2 + (point_y - nearest_y) ** 2) <= tolerance * tolerance
+
+    def _shape_screen_bbox(
+        self,
+        shape: dict,
+        offset_x: float,
+        offset_y: float,
+        scale: float,
+    ) -> tuple[float, float, float, float] | None:
+        kind = shape["kind"]
+        if kind == "circle":
+            radius = float(shape.get("radius", 0)) * scale
+            x = offset_x + float(shape.get("x", 0)) * scale
+            y = offset_y + float(shape.get("y", 0)) * scale
+            return (x - radius, y - radius, x + radius, y + radius)
+
+        if kind in {"rect", "ellipse"}:
+            x = offset_x + float(shape.get("x", 0)) * scale
+            y = offset_y + float(shape.get("y", 0)) * scale
+            w = float(shape.get("width", 0)) * scale
+            h = float(shape.get("height", 0)) * scale
+            return (x, y, x + w, y + h)
+
+        if kind == "line":
+            x1 = offset_x + float(shape.get("x", 0)) * scale
+            y1 = offset_y + float(shape.get("y", 0)) * scale
+            x2 = offset_x + float(shape.get("x2", 0)) * scale
+            y2 = offset_y + float(shape.get("y2", 0)) * scale
+            padding = max(6.0, float(shape.get("outline_width", 0)) * scale)
+            return (
+                min(x1, x2) - padding,
+                min(y1, y2) - padding,
+                max(x1, x2) + padding,
+                max(y1, y2) + padding,
+            )
+
+        return None
 
 
 def main() -> None:
