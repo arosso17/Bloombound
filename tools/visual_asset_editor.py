@@ -117,14 +117,27 @@ class VisualAssetEditor:
         ttk.Button(button_row, text="Save", command=self.save_asset).grid(row=0, column=2, padx=4)
         ttk.Button(button_row, text="Save As", command=self.save_asset_as).grid(row=0, column=3, padx=(4, 0))
 
-        ttk.Label(parent, text="Shapes").grid(row=4, column=0, sticky="w")
+        assets_header = ttk.Frame(parent)
+        assets_header.grid(row=4, column=0, sticky="ew")
+        ttk.Label(assets_header, text="Assets In Folder").grid(row=0, column=0, sticky="w")
+        ttk.Button(assets_header, text="Refresh", command=self.refresh_asset_files).grid(row=0, column=1, sticky="e", padx=(10, 0))
+
+        self.asset_files_listbox = tk.Listbox(parent, height=8, exportselection=False)
+        self.asset_files_listbox.grid(row=5, column=0, sticky="nsew", pady=(4, 10))
+        self.asset_files_listbox.bind("<Double-Button-1>", lambda _: self.open_selected_asset_file())
+
+        asset_file_buttons = ttk.Frame(parent)
+        asset_file_buttons.grid(row=6, column=0, sticky="ew", pady=(0, 10))
+        ttk.Button(asset_file_buttons, text="Open Selected", command=self.open_selected_asset_file).grid(row=0, column=0, sticky="ew")
+
+        ttk.Label(parent, text="Shapes").grid(row=7, column=0, sticky="w")
         self.shape_listbox = tk.Listbox(parent, height=18, exportselection=False)
-        self.shape_listbox.grid(row=5, column=0, sticky="nsew")
+        self.shape_listbox.grid(row=8, column=0, sticky="nsew")
         self.shape_listbox.bind("<<ListboxSelect>>", lambda _: self._load_selected_shape())
-        parent.rowconfigure(5, weight=1)
+        parent.rowconfigure(8, weight=1)
 
         shape_buttons = ttk.Frame(parent)
-        shape_buttons.grid(row=6, column=0, sticky="ew", pady=(10, 0))
+        shape_buttons.grid(row=9, column=0, sticky="ew", pady=(10, 0))
         ttk.Button(shape_buttons, text="Add Circle", command=lambda: self.add_shape("circle")).grid(row=0, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Rect", command=lambda: self.add_shape("rect")).grid(row=1, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Ellipse", command=lambda: self.add_shape("ellipse")).grid(row=2, column=0, pady=2, sticky="ew")
@@ -199,13 +212,7 @@ class VisualAssetEditor:
         )
         if not path:
             return
-        self.asset_path = Path(path)
-        self.asset = json.loads(self.asset_path.read_text(encoding="utf-8"))
-        self.drag_shape_index = None
-        self.drag_last_world = None
-        self.drag_mode = None
-        self.drag_handle = None
-        self._refresh_all()
+        self._load_asset_from_path(Path(path))
 
     def save_asset(self) -> None:
         self._sync_asset_metadata()
@@ -213,6 +220,7 @@ class VisualAssetEditor:
             self.save_asset_as()
             return
         self.asset_path.write_text(json.dumps(self.asset, indent=2) + "\n", encoding="utf-8")
+        self.refresh_asset_files(select_name=self.asset_path.name)
         messagebox.showinfo("Saved", f"Saved {self.asset_path.name}")
 
     def save_asset_as(self) -> None:
@@ -229,6 +237,34 @@ class VisualAssetEditor:
             return
         self.asset_path = Path(path)
         self.save_asset()
+
+    def refresh_asset_files(self, select_name: str | None = None) -> None:
+        self.asset_files_listbox.delete(0, tk.END)
+        asset_files = sorted(ASSET_DIR.glob("*.json"))
+        for asset_file in asset_files:
+            self.asset_files_listbox.insert(tk.END, asset_file.name)
+
+        target_name = select_name
+        if target_name is None and self.asset_path is not None:
+            target_name = self.asset_path.name
+
+        if target_name is None:
+            return
+
+        for index, asset_file in enumerate(asset_files):
+            if asset_file.name == target_name:
+                self.asset_files_listbox.selection_clear(0, tk.END)
+                self.asset_files_listbox.selection_set(index)
+                self.asset_files_listbox.activate(index)
+                self.asset_files_listbox.see(index)
+                break
+
+    def open_selected_asset_file(self) -> None:
+        selection = self.asset_files_listbox.curselection()
+        if not selection:
+            return
+        asset_name = self.asset_files_listbox.get(selection[0])
+        self._load_asset_from_path(ASSET_DIR / asset_name)
 
     def add_shape(self, kind: str) -> None:
         shape = {
@@ -348,6 +384,7 @@ class VisualAssetEditor:
         self.asset_id_var.set(self.asset["asset_id"])
         self.canvas_width_var.set(str(self.asset["canvas"]["width"]))
         self.canvas_height_var.set(str(self.asset["canvas"]["height"]))
+        self.refresh_asset_files()
         self._refresh_shape_list()
         self._draw_preview()
 
@@ -792,6 +829,15 @@ class VisualAssetEditor:
             )
 
         return None
+
+    def _load_asset_from_path(self, path: Path) -> None:
+        self.asset_path = path
+        self.asset = json.loads(self.asset_path.read_text(encoding="utf-8"))
+        self.drag_shape_index = None
+        self.drag_last_world = None
+        self.drag_mode = None
+        self.drag_handle = None
+        self._refresh_all()
 
 
 def main() -> None:
