@@ -11,7 +11,7 @@ import pygame as pg
 
 from gameplay.collision import move_circle
 from gameplay.map_loader import load_map
-from gameplay.map_types import MapDefinition
+from gameplay.map_types import CollisionRect, MapDefinition, TraversalBarrierDef
 from gameplay.state import ALIVE_SPEED, PLAYER_COLORS, SPIRIT_SPEED
 from gameplay.visual_assets import load_visual_asset, render_visual_asset
 from network.diagnostics import ClientDiagnostics
@@ -35,12 +35,12 @@ HEDGE_COLOR = (111, 139, 96)
 HEDGE_ACCENT_COLOR = (140, 171, 122)
 REVIVAL_EGG_COLOR = (244, 173, 208)
 RESTORATION_EGG_COLOR = (143, 214, 181)
-HAZARD_FILL_COLOR = (164, 88, 88, 72)
-HAZARD_OUTLINE_COLOR = (132, 61, 61)
-RESTORATION_FILL_COLOR = (122, 174, 122, 58)
-RESTORATION_OUTLINE_COLOR = (81, 132, 84)
-RESTORATION_RESTORED_FILL = (160, 216, 156, 92)
-RESTORATION_RESTORED_OUTLINE = (58, 117, 65)
+HAZARD_FILL_COLOR = (164, 88, 88, 40)
+HAZARD_OUTLINE_COLOR = (132, 61, 61, 148)
+RESTORATION_FILL_COLOR = (122, 174, 122, 28)
+RESTORATION_OUTLINE_COLOR = (81, 132, 84, 120)
+RESTORATION_RESTORED_FILL = (160, 216, 156, 44)
+RESTORATION_RESTORED_OUTLINE = (58, 117, 65, 138)
 ENEMY_PATROL_RING = (86, 118, 78)
 ENEMY_ALERT_RING = (224, 162, 81)
 ENEMY_CHASE_RING = (198, 83, 83)
@@ -437,7 +437,7 @@ class EasterClientApp:
             delta_y=move_y * speed * dt,
             world_width=self.snapshot.world_width,
             world_height=self.snapshot.world_height,
-            collision_rects=self.current_map.collision_rects,
+            collision_rects=self._local_collision_rects(),
         )
         self.local_predicted_player["x"] = next_x
         self.local_predicted_player["y"] = next_y
@@ -485,9 +485,9 @@ class EasterClientApp:
         playfield_rect = pg.Rect(32, 96, WINDOW_WIDTH - 64, WINDOW_HEIGHT - 132)
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
-        self._draw_map_geometry(screen, playfield_rect, camera_rect)
         self._draw_hazard_zones(screen, playfield_rect, camera_rect)
         self._draw_restoration_zones(screen, playfield_rect, camera_rect, small_font)
+        self._draw_map_geometry(screen, playfield_rect, camera_rect)
         self._draw_map_decorations(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
@@ -722,6 +722,19 @@ class EasterClientApp:
             if accent_rect.width > 0 and accent_rect.height > 0:
                 pg.draw.rect(screen, HEDGE_ACCENT_COLOR, accent_rect, border_radius=10)
 
+        for barrier in self._active_barriers():
+            screen_rect = self._screen_rect(barrier.x, barrier.y, barrier.width, barrier.height, playfield_rect, camera_rect)
+            if screen_rect is None:
+                continue
+            fill_color = (120, 150, 102) if not barrier.spirit_passable else (130, 166, 189)
+            accent_color = (156, 185, 136) if not barrier.spirit_passable else (173, 205, 223)
+            pg.draw.rect(screen, fill_color, screen_rect, border_radius=10)
+            accent_rect = screen_rect.inflate(-8, -8)
+            if accent_rect.width > 0 and accent_rect.height > 0:
+                pg.draw.rect(screen, accent_color, accent_rect, border_radius=8)
+            if barrier.spirit_passable and screen_rect.width > 14 and screen_rect.height > 14:
+                pg.draw.rect(screen, (230, 244, 255), screen_rect, width=2, border_radius=10)
+
     def _draw_hazard_zones(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
         for zone in self.snapshot.hazard_zones or []:
             if not zone.get("active", True):
@@ -807,6 +820,41 @@ class EasterClientApp:
             if ((float(zone["x"]) - world_x) ** 2 + (float(zone["y"]) - world_y) ** 2) ** 0.5 <= radius:
                 return zone
         return None
+
+    def _active_barriers(self) -> list[TraversalBarrierDef]:
+        if self.current_map is None:
+            return []
+        restored_lookup = {
+            str(zone.get("id", "")): bool(zone.get("restored", False))
+            for zone in self.snapshot.restoration_zones or []
+        }
+        active: list[TraversalBarrierDef] = []
+        for barrier in self.current_map.traversal_barriers:
+            if barrier.cleared_by_zone_id and restored_lookup.get(barrier.cleared_by_zone_id, False):
+                continue
+            active.append(barrier)
+        return active
+
+    @staticmethod
+    def _barrier_rects(barriers: list[TraversalBarrierDef]) -> list[CollisionRect]:
+        return [
+            CollisionRect(
+                rect_id=barrier.barrier_id,
+                x=barrier.x,
+                y=barrier.y,
+                width=barrier.width,
+                height=barrier.height,
+            )
+            for barrier in barriers
+        ]
+
+    def _local_collision_rects(self) -> list[CollisionRect]:
+        if self.current_map is None or self.local_predicted_player is None:
+            return []
+        active_barriers = self._active_barriers()
+        if self.local_predicted_player.get("state") == "spirit":
+            active_barriers = [barrier for barrier in active_barriers if not barrier.spirit_passable]
+        return self.current_map.collision_rects + self._barrier_rects(active_barriers)
 
     def _screen_rect(
         self,

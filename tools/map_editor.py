@@ -17,6 +17,7 @@ DEFAULT_MAP = {
     "world": {"width": 1600, "height": 960},
     "player_spawns": [],
     "collision_rects": [],
+    "traversal_barriers": [],
     "decorations": [],
     "patrol_points": [],
     "egg_spawns": [],
@@ -49,6 +50,7 @@ class MapEditor:
         self.world_height_var = tk.StringVar(value=str(self.map_data["world"]["height"]))
         self.layer_visibility_vars: dict[str, tk.BooleanVar] = {
             "collision_rects": tk.BooleanVar(value=True),
+            "traversal_barriers": tk.BooleanVar(value=True),
             "decorations": tk.BooleanVar(value=True),
             "player_spawns": tk.BooleanVar(value=True),
             "egg_spawns": tk.BooleanVar(value=True),
@@ -82,6 +84,7 @@ class MapEditor:
             "cleared_by_zone_id": tk.StringVar(value=""),
             "slow_multiplier": tk.StringVar(value=""),
             "egg_type": tk.StringVar(value=""),
+            "spirit_passable": tk.StringVar(value=""),
         }
 
         self.selected_ref: tuple[str, int | None] | None = None
@@ -241,6 +244,7 @@ class MapEditor:
         tool_specs = [
             ("select", "Select"),
             ("collision", "Add Collision"),
+            ("traversal_barrier", "Add Barrier"),
             ("decoration", "Add Decoration"),
             ("patrol_point", "Add Patrol Point"),
             ("player_spawn", "Add Player Spawn"),
@@ -261,6 +265,7 @@ class MapEditor:
         layers_frame.grid(row=8, column=0, sticky="ew")
         layer_specs = [
             ("collision_rects", "Collision"),
+            ("traversal_barriers", "Barriers"),
             ("decorations", "Decorations"),
             ("player_spawns", "Player Spawns"),
             ("egg_spawns", "Eggs"),
@@ -324,6 +329,7 @@ class MapEditor:
             ("width", "Width"),
             ("height", "Height"),
             ("radius", "Radius"),
+            ("spirit_passable", "Spirit Passable"),
             ("scale", "Scale"),
             ("interact_radius", "Interact Radius"),
             ("revive_radius", "Revive Radius"),
@@ -446,6 +452,12 @@ class MapEditor:
                 obj["rect_id"] = self.property_vars["id"].get().strip() or obj["rect_id"]
                 obj["width"] = max(1.0, self._parse_float_var("width"))
                 obj["height"] = max(1.0, self._parse_float_var("height"))
+            elif section == "traversal_barriers":
+                obj["barrier_id"] = self.property_vars["id"].get().strip() or obj["barrier_id"]
+                obj["width"] = max(1.0, self._parse_float_var("width"))
+                obj["height"] = max(1.0, self._parse_float_var("height"))
+                obj["cleared_by_zone_id"] = self.property_vars["cleared_by_zone_id"].get().strip()
+                obj["spirit_passable"] = self._parse_bool_var("spirit_passable")
             elif section == "decorations":
                 obj["decoration_id"] = self.property_vars["id"].get().strip() or obj["decoration_id"]
                 obj["asset_id"] = self.property_vars["asset_id"].get().strip() or obj["asset_id"]
@@ -641,6 +653,9 @@ class MapEditor:
         labels: list[tuple[tuple[str, int | None], str]] = []
         for index, rect in enumerate(self.map_data["collision_rects"]):
             labels.append((("collision_rects", index), f"Collision: {rect['rect_id']}"))
+        for index, barrier in enumerate(self.map_data["traversal_barriers"]):
+            barrier_kind = "Spirit" if barrier.get("spirit_passable", False) else "Solid"
+            labels.append((("traversal_barriers", index), f"Barrier: {barrier['barrier_id']} ({barrier_kind})"))
         for index, decoration in enumerate(self.map_data["decorations"]):
             labels.append((("decorations", index), f"Decoration: {decoration['decoration_id']} ({decoration['asset_id']})"))
         for index, point in enumerate(self.map_data["patrol_points"]):
@@ -693,6 +708,7 @@ class MapEditor:
         self._set_property("width", obj.get("width", ""))
         self._set_property("height", obj.get("height", ""))
         self._set_property("radius", obj.get("radius", ""))
+        self._set_property("spirit_passable", obj.get("spirit_passable", ""))
         self._set_property("scale", obj.get("scale", ""))
         self._set_property("interact_radius", obj.get("interact_radius", ""))
         self._set_property("revive_radius", obj.get("revive_radius", ""))
@@ -711,6 +727,8 @@ class MapEditor:
 
         if section == "collision_rects":
             self._set_property("id", obj.get("rect_id", ""))
+        elif section == "traversal_barriers":
+            self._set_property("id", obj.get("barrier_id", ""))
         elif section == "decorations":
             self._set_property("id", obj.get("decoration_id", ""))
         elif section == "patrol_points":
@@ -752,6 +770,14 @@ class MapEditor:
             raise ValueError(f"{key} is required.")
         return float(value)
 
+    def _parse_bool_var(self, key: str) -> bool:
+        value = self.property_vars[key].get().strip().lower()
+        if value in {"", "0", "false", "no", "off"}:
+            return False
+        if value in {"1", "true", "yes", "on"}:
+            return True
+        raise ValueError(f"{key} must be true/false.")
+
     def _draw_canvas(self) -> None:
         self.canvas.delete("all")
         canvas_width = int(self.canvas.winfo_width() or 980)
@@ -770,6 +796,9 @@ class MapEditor:
         if self._layer_visible("collision_rects"):
             for index, rect in enumerate(self.map_data["collision_rects"]):
                 self._draw_collision_rect(index, rect)
+        if self._layer_visible("traversal_barriers"):
+            for index, barrier in enumerate(self.map_data["traversal_barriers"]):
+                self._draw_traversal_barrier(index, barrier)
         if self._layer_visible("decorations"):
             for index, decoration in enumerate(self.map_data["decorations"]):
                 self._draw_decoration_marker(index, decoration)
@@ -822,6 +851,17 @@ class MapEditor:
         self.canvas.create_rectangle(x1, y1, x2, y2, fill="#7aa06c", outline="#4f6c45", width=2)
         self.canvas.create_text((x1 + x2) / 2, (y1 + y2) / 2, text=rect["rect_id"], fill="#23311f")
 
+    def _draw_traversal_barrier(self, index: int, barrier: dict) -> None:
+        x1, y1 = self._world_to_screen(barrier["x"], barrier["y"])
+        x2, y2 = self._world_to_screen(barrier["x"] + barrier["width"], barrier["y"] + barrier["height"])
+        fill = "#9cc1da" if barrier.get("spirit_passable", False) else "#90ab6f"
+        outline = "#4f6f88" if barrier.get("spirit_passable", False) else "#5b6a41"
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill=fill, outline=outline, width=2, dash=(4, 2))
+        label = barrier["barrier_id"]
+        if barrier.get("cleared_by_zone_id"):
+            label += f" -> {barrier['cleared_by_zone_id']}"
+        self.canvas.create_text((x1 + x2) / 2, (y1 + y2) / 2, text=label, fill="#23311f")
+
     def _draw_point_marker(self, world_x: float, world_y: float, fill: str, label: str) -> None:
         x, y = self._world_to_screen(world_x, world_y)
         radius = 8
@@ -872,7 +912,7 @@ class MapEditor:
         if not self._layer_visible(section):
             return
 
-        if section == "collision_rects":
+        if section in {"collision_rects", "traversal_barriers"}:
             bbox = self._collision_bbox(obj)
             self.canvas.create_rectangle(*bbox, outline="#246bff", width=2, dash=(6, 4))
             for handle_name, hx, hy in self._rect_handles(obj):
@@ -892,7 +932,7 @@ class MapEditor:
         objects = self._iter_hit_test_objects()
         for ref, obj in reversed(objects):
             section, _ = ref
-            if section == "collision_rects":
+            if section in {"collision_rects", "traversal_barriers"}:
                 if obj["x"] <= world_x <= obj["x"] + obj["width"] and obj["y"] <= world_y <= obj["y"] + obj["height"]:
                     return ref
             else:
@@ -907,6 +947,8 @@ class MapEditor:
         objects: list[tuple[tuple[str, int | None], dict]] = []
         if self._layer_visible("collision_rects"):
             objects.extend((("collision_rects", index), rect) for index, rect in enumerate(self.map_data["collision_rects"]))
+        if self._layer_visible("traversal_barriers"):
+            objects.extend((("traversal_barriers", index), barrier) for index, barrier in enumerate(self.map_data["traversal_barriers"]))
         if self._layer_visible("decorations"):
             objects.extend((("decorations", index), decoration) for index, decoration in enumerate(self.map_data["decorations"]))
         if self._layer_visible("hazard_zones"):
@@ -932,7 +974,7 @@ class MapEditor:
         if target is None:
             return None
         section, _, obj = target
-        if section == "collision_rects":
+        if section in {"collision_rects", "traversal_barriers"}:
             handles = self._rect_handles(obj)
         elif section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "restoration_zones", "hazard_zones"}:
             handles = self._radius_handles(obj)
@@ -963,7 +1005,7 @@ class MapEditor:
         if handle_name is None:
             return
 
-        if section == "collision_rects":
+        if section in {"collision_rects", "traversal_barriers"}:
             left = float(start_obj["x"])
             top = float(start_obj["y"])
             right = left + float(start_obj["width"])
@@ -1004,7 +1046,7 @@ class MapEditor:
         world_h = float(self.map_data["world"]["height"])
         obj["x"] = round(max(0.0, min(world_w, float(obj["x"]))), 2)
         obj["y"] = round(max(0.0, min(world_h, float(obj["y"]))), 2)
-        if section == "collision_rects":
+        if section in {"collision_rects", "traversal_barriers"}:
             obj["width"] = round(max(1.0, min(float(obj["width"]), world_w - float(obj["x"]))), 2)
             obj["height"] = round(max(1.0, min(float(obj["height"]), world_h - float(obj["y"]))), 2)
 
@@ -1020,6 +1062,22 @@ class MapEditor:
             }
             self.map_data["collision_rects"].append(new_obj)
             self._select_object_ref(("collision_rects", len(self.map_data["collision_rects"]) - 1))
+            return
+        if tool == "traversal_barrier":
+            self._ensure_layer_visible("traversal_barriers")
+            cleared_by_zone_id = self.map_data["restoration_zones"][0]["zone_id"] if self.map_data["restoration_zones"] else ""
+            self.map_data["traversal_barriers"].append(
+                {
+                    "barrier_id": self._next_id("traversal_barriers", "barrier_id", "barrier"),
+                    "x": world_x,
+                    "y": world_y,
+                    "width": GRID_SIZE * 5,
+                    "height": GRID_SIZE * 2,
+                    "cleared_by_zone_id": cleared_by_zone_id,
+                    "spirit_passable": False,
+                }
+            )
+            self._select_object_ref(("traversal_barriers", len(self.map_data["traversal_barriers"]) - 1))
             return
         if tool == "decoration":
             self._ensure_layer_visible("decorations")
@@ -1182,6 +1240,7 @@ class MapEditor:
     def _load_map_path(self, path: Path) -> None:
         self.map_path = path
         self.map_data = json.loads(path.read_text(encoding="utf-8"))
+        self.map_data.setdefault("traversal_barriers", [])
         self.map_data.setdefault("decorations", [])
         self.map_data.setdefault("patrol_points", [])
         self.map_data.setdefault("restoration_zones", [])

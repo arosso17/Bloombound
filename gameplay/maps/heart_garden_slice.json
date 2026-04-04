@@ -27,9 +27,9 @@
     {
       "rect_id": "north_hedge",
       "x": 330.0,
-      "y": 140.0,
-      "width": 940.0,
-      "height": 34.0
+      "y": 144.0,
+      "width": 966.0,
+      "height": 32.0
     },
     {
       "rect_id": "west_hedge",
@@ -76,9 +76,9 @@
     {
       "rect_id": "greenhouse",
       "x": 1088.0,
-      "y": 236.0,
-      "width": 196.0,
-      "height": 208.0
+      "y": 240.0,
+      "width": 208.0,
+      "height": 204.0
     },
     {
       "rect_id": "south_hedge_a",
@@ -97,9 +97,9 @@
     {
       "rect_id": "east_channel",
       "x": 1260.0,
-      "y": 470.0,
-      "width": 34.0,
-      "height": 224.0
+      "y": 448.0,
+      "width": 36.0,
+      "height": 214.0
     },
     {
       "rect_id": "heart_chamber_left",
@@ -123,12 +123,23 @@
       "height": 34.0
     }
   ],
+  "traversal_barriers": [
+    {
+      "barrier_id": "pond_shortcut_gate",
+      "x": 880.0,
+      "y": 596.0,
+      "width": 100.0,
+      "height": 34.0,
+      "cleared_by_zone_id": "restore_pond",
+      "spirit_passable": false
+    }
+  ],
   "decorations": [
     {
       "decoration_id": "decoration_1",
       "asset_id": "dead_flower",
-      "x": 880.0,
-      "y": 528.0,
+      "x": 752.0,
+      "y": 560.0,
       "scale": 0.5
     }
   ],
@@ -154,7 +165,7 @@
     {
       "point_id": "patrol_2b",
       "enemy_id": "bramble_2",
-      "x": 826.0,
+      "x": 858.0,
       "y": 532.0
     },
     {
@@ -166,8 +177,8 @@
     {
       "point_id": "patrol_3b",
       "enemy_id": "bramble_3",
-      "x": 1208.0,
-      "y": 648.0
+      "x": 1304.0,
+      "y": 696.0
     }
   ],
   "egg_spawns": [

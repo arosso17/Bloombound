@@ -45,6 +45,17 @@ class DecorationDef:
 
 
 @dataclass(frozen=True)
+class TraversalBarrierDef:
+    barrier_id: str
+    x: float
+    y: float
+    width: float
+    height: float
+    cleared_by_zone_id: str = ""
+    spirit_passable: bool = False
+
+
+@dataclass(frozen=True)
 class ShrineDef:
     shrine_id: str
     x: float
@@ -105,6 +116,7 @@ class MapDefinition:
     world_height: int
     player_spawns: list[SpawnPoint]
     collision_rects: list[CollisionRect]
+    traversal_barriers: list[TraversalBarrierDef]
     decorations: list[DecorationDef]
     patrol_points: list[PatrolPointDef]
     egg_spawns: list[EggSpawnDef]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from gameplay.collision import move_circle
+from gameplay.collision import circle_overlaps_rect, move_circle
 from gameplay.entities import (
     EggState,
     EnemyState,
@@ -14,6 +14,7 @@ from gameplay.entities import (
     ShrineState,
 )
 from gameplay.map_loader import load_map
+from gameplay.map_types import CollisionRect, TraversalBarrierDef
 from gameplay.navigation import NavGrid, find_path
 
 
@@ -234,7 +235,7 @@ class GameState:
             delta_y=move_y * speed * dt,
             world_width=self.map.world_width,
             world_height=self.map.world_height,
-            collision_rects=self.map.collision_rects,
+            collision_rects=self._player_collision_rects(player),
         )
 
         if self._pressed(player, "debug_down") and player.state == "alive":
@@ -298,7 +299,7 @@ class GameState:
                     delta_y=(delta_y / magnitude) * step_distance,
                     world_width=self.map.world_width,
                     world_height=self.map.world_height,
-                    collision_rects=self.map.collision_rects,
+                    collision_rects=self._enemy_collision_rects(),
                 )
                 enemy.x, enemy.y = self._keep_enemy_out_of_restored_zones(enemy.x, enemy.y, enemy.radius)
 
@@ -463,6 +464,8 @@ class GameState:
             self._consume_carried_eggs(player, zone.required_egg_type, zone.restore_cost)
             zone.restored = True
             self._sync_hazard_state()
+            self.enemy_paths = {}
+            self.enemy_path_targets = {}
             return True
         return False
 
@@ -626,6 +629,39 @@ class GameState:
                 multiplier = min(multiplier, hazard.slow_multiplier)
         return multiplier
 
+    def _barrier_is_active(self, barrier: TraversalBarrierDef) -> bool:
+        if not barrier.cleared_by_zone_id:
+            return True
+        for zone in self.restoration_zones:
+            if zone.zone_id == barrier.cleared_by_zone_id:
+                return not zone.restored
+        return True
+
+    @staticmethod
+    def _barrier_collision_rects(barriers: list[TraversalBarrierDef]) -> list[CollisionRect]:
+        return [
+            CollisionRect(
+                rect_id=barrier.barrier_id,
+                x=barrier.x,
+                y=barrier.y,
+                width=barrier.width,
+                height=barrier.height,
+            )
+            for barrier in barriers
+        ]
+
+    def _active_barriers(self) -> list[TraversalBarrierDef]:
+        return [barrier for barrier in self.map.traversal_barriers if self._barrier_is_active(barrier)]
+
+    def _player_collision_rects(self, player: PlayerState) -> list[CollisionRect]:
+        active_barriers = self._active_barriers()
+        if player.state == "spirit":
+            active_barriers = [barrier for barrier in active_barriers if not barrier.spirit_passable]
+        return self.map.collision_rects + self._barrier_collision_rects(active_barriers)
+
+    def _enemy_collision_rects(self) -> list[CollisionRect]:
+        return self.map.collision_rects + self._barrier_collision_rects(self._active_barriers())
+
     def _restored_zone_at(self, x: float, y: float, radius: float = 0.0) -> RestorationZoneState | None:
         for zone in self.restoration_zones:
             if not zone.restored:
@@ -675,6 +711,16 @@ class GameState:
                 for row in range(min_row, max_row + 1):
                     center_x, center_y = self.nav_grid.cell_center((col, row))
                     if distance(center_x, center_y, zone.x, zone.y) <= zone.radius:
+                        blocked.add((col, row))
+        for barrier_rect in self._barrier_collision_rects(self._active_barriers()):
+            min_col = max(0, int(barrier_rect.x // self.nav_grid.cell_size) - 1)
+            max_col = min(self.nav_grid.cols - 1, int((barrier_rect.x + barrier_rect.width) // self.nav_grid.cell_size) + 1)
+            min_row = max(0, int(barrier_rect.y // self.nav_grid.cell_size) - 1)
+            max_row = min(self.nav_grid.rows - 1, int((barrier_rect.y + barrier_rect.height) // self.nav_grid.cell_size) + 1)
+            for col in range(min_col, max_col + 1):
+                for row in range(min_row, max_row + 1):
+                    center_x, center_y = self.nav_grid.cell_center((col, row))
+                    if circle_overlaps_rect(center_x, center_y, 18.0, barrier_rect):
                         blocked.add((col, row))
         return blocked
 

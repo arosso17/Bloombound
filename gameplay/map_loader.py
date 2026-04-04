@@ -15,6 +15,7 @@ from gameplay.map_types import (
     RestorationZoneDef,
     ShrineDef,
     SpawnPoint,
+    TraversalBarrierDef,
 )
 
 
@@ -27,6 +28,7 @@ def load_map(map_id: str) -> MapDefinition:
 
     player_spawns = [SpawnPoint(**spawn) for spawn in payload["player_spawns"]]
     collision_rects = [CollisionRect(**rect) for rect in payload["collision_rects"]]
+    traversal_barriers = [TraversalBarrierDef(**barrier) for barrier in payload.get("traversal_barriers", [])]
     decorations = [DecorationDef(**decoration) for decoration in payload.get("decorations", [])]
     patrol_points = [PatrolPointDef(**point) for point in payload.get("patrol_points", [])]
     egg_spawns = [EggSpawnDef(**spawn) for spawn in payload["egg_spawns"]]
@@ -43,6 +45,7 @@ def load_map(map_id: str) -> MapDefinition:
         world_height=int(payload["world"]["height"]),
         player_spawns=player_spawns,
         collision_rects=collision_rects,
+        traversal_barriers=traversal_barriers,
         decorations=decorations,
         patrol_points=patrol_points,
         egg_spawns=egg_spawns,
