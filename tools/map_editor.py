@@ -103,8 +103,23 @@ class MapEditor:
         self.root.columnconfigure(1, weight=1)
         self.root.rowconfigure(0, weight=1)
 
-        sidebar = ttk.Frame(self.root, padding=10)
-        sidebar.grid(row=0, column=0, sticky="ns")
+        sidebar_wrap = ttk.Frame(self.root, padding=10)
+        sidebar_wrap.grid(row=0, column=0, sticky="nsew")
+        sidebar_wrap.rowconfigure(0, weight=1)
+        sidebar_wrap.columnconfigure(0, weight=1)
+
+        self.sidebar_canvas = tk.Canvas(sidebar_wrap, width=280, highlightthickness=0)
+        self.sidebar_canvas.grid(row=0, column=0, sticky="nsew")
+        sidebar_scrollbar = ttk.Scrollbar(sidebar_wrap, orient="vertical", command=self.sidebar_canvas.yview)
+        sidebar_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.sidebar_canvas.configure(yscrollcommand=sidebar_scrollbar.set)
+
+        sidebar = ttk.Frame(self.sidebar_canvas, padding=2)
+        self.sidebar_window = self.sidebar_canvas.create_window((0, 0), window=sidebar, anchor="nw")
+        sidebar.bind("<Configure>", self._on_sidebar_frame_configure)
+        self.sidebar_canvas.bind("<Configure>", self._on_sidebar_canvas_configure)
+        self.sidebar_canvas.bind("<Enter>", self._bind_sidebar_mousewheel)
+        self.sidebar_canvas.bind("<Leave>", self._unbind_sidebar_mousewheel)
 
         canvas_wrap = ttk.Frame(self.root, padding=10)
         canvas_wrap.grid(row=0, column=1, sticky="nsew")
@@ -133,7 +148,34 @@ class MapEditor:
         self._build_sidebar(sidebar)
         self._build_canvas(canvas_wrap)
         self._build_inspector(inspector)
+        self._bind_sidebar_region(sidebar)
         self._bind_inspector_region(inspector)
+
+    def _on_sidebar_frame_configure(self, _event: tk.Event) -> None:
+        self.sidebar_canvas.configure(scrollregion=self.sidebar_canvas.bbox("all"))
+
+    def _on_sidebar_canvas_configure(self, event: tk.Event) -> None:
+        self.sidebar_canvas.itemconfigure(self.sidebar_window, width=event.width)
+
+    def _bind_sidebar_mousewheel(self, _event: tk.Event) -> None:
+        self.sidebar_canvas.bind_all("<MouseWheel>", self._on_sidebar_mousewheel)
+        self.sidebar_canvas.bind_all("<Button-4>", self._on_sidebar_mousewheel_linux_up)
+        self.sidebar_canvas.bind_all("<Button-5>", self._on_sidebar_mousewheel_linux_down)
+
+    def _unbind_sidebar_mousewheel(self, _event: tk.Event) -> None:
+        self.sidebar_canvas.unbind_all("<MouseWheel>")
+        self.sidebar_canvas.unbind_all("<Button-4>")
+        self.sidebar_canvas.unbind_all("<Button-5>")
+
+    def _on_sidebar_mousewheel(self, event: tk.Event) -> None:
+        direction = -1 if event.delta > 0 else 1
+        self.sidebar_canvas.yview_scroll(direction, "units")
+
+    def _on_sidebar_mousewheel_linux_up(self, _event: tk.Event) -> None:
+        self.sidebar_canvas.yview_scroll(-1, "units")
+
+    def _on_sidebar_mousewheel_linux_down(self, _event: tk.Event) -> None:
+        self.sidebar_canvas.yview_scroll(1, "units")
 
     def _on_inspector_frame_configure(self, _event: tk.Event) -> None:
         self.inspector_canvas.configure(scrollregion=self.inspector_canvas.bbox("all"))
@@ -160,6 +202,12 @@ class MapEditor:
 
     def _on_inspector_mousewheel_linux_down(self, _event: tk.Event) -> None:
         self.inspector_canvas.yview_scroll(1, "units")
+
+    def _bind_sidebar_region(self, widget: tk.Misc) -> None:
+        widget.bind("<Enter>", self._bind_sidebar_mousewheel, add="+")
+        widget.bind("<Leave>", self._unbind_sidebar_mousewheel, add="+")
+        for child in widget.winfo_children():
+            self._bind_sidebar_region(child)
 
     def _bind_inspector_region(self, widget: tk.Misc) -> None:
         widget.bind("<Enter>", self._bind_inspector_mousewheel, add="+")
