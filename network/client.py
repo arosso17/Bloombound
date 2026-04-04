@@ -11,7 +11,7 @@ import pygame as pg
 
 from gameplay.collision import move_circle
 from gameplay.map_loader import load_map
-from gameplay.map_types import CollisionRect, MapDefinition, TraversalBarrierDef
+from gameplay.map_types import CollisionRect, DecorationDef, MapDefinition, TraversalBarrierDef
 from gameplay.state import ALIVE_SPEED, PLAYER_COLORS, SPIRIT_SPEED
 from gameplay.visual_assets import load_visual_asset, render_visual_asset
 from network.diagnostics import ClientDiagnostics
@@ -253,7 +253,7 @@ class EasterClientApp:
             self.diagnostics.record_message(str(message_type or "unknown"))
             if message_type == "welcome":
                 self.player_id = str(message["player_id"])
-                self._load_map(str(message.get("map_id", "heart_garden_slice")))
+                self._load_map(str(message.get("map_id", "new_map")))
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.snapshot.world_width = int(message["world"]["width"])
                 self.snapshot.world_height = int(message["world"]["height"])
@@ -266,7 +266,7 @@ class EasterClientApp:
                 self.local_predicted_player = None
                 self._send_profile_update()
             elif message_type == "lobby_state":
-                self._load_map(str(message.get("map_id", "heart_garden_slice")))
+                self._load_map(str(message.get("map_id", "new_map")))
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.expected_players = int(message.get("expected_players", 1))
                 self.host_id = str(message.get("host_id", ""))
@@ -279,7 +279,7 @@ class EasterClientApp:
                 snapshot_tick = int(message.get("tick", 0))
                 if snapshot_tick < self.snapshot.tick:
                     continue
-                self._load_map(str(message.get("map_id", "heart_garden_slice")))
+                self._load_map(str(message.get("map_id", "new_map")))
                 self.snapshot.tick = snapshot_tick
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))
@@ -818,7 +818,7 @@ class EasterClientApp:
         for decoration in self.current_map.decorations:
             if not self._world_point_visible(decoration.x, decoration.y, playfield_rect, camera_rect, margin=96):
                 continue
-            asset_id = self._decoration_asset_id(decoration.asset_id, decoration.x, decoration.y)
+            asset_id = self._decoration_asset_id(decoration)
             try:
                 asset = load_visual_asset(asset_id)
             except FileNotFoundError:
@@ -858,8 +858,9 @@ class EasterClientApp:
             )
             pg.draw.circle(screen, outline_color, (sx, sy), 28, width=2)
 
-    def _decoration_asset_id(self, asset_id: str, world_x: float, world_y: float) -> str:
-        restored_zone = self._restored_zone_near(world_x, world_y)
+    def _decoration_asset_id(self, decoration: DecorationDef) -> str:
+        asset_id = decoration.asset_id
+        restored_zone = self._restored_zone_for_decoration(decoration)
         if restored_zone is None:
             return asset_id
 
@@ -875,6 +876,16 @@ class EasterClientApp:
             return candidate_id
         except FileNotFoundError:
             return asset_id
+
+    def _restored_zone_for_decoration(self, decoration: DecorationDef) -> dict | None:
+        if decoration.restored_by_zone_id:
+            for zone in self.snapshot.restoration_zones or []:
+                if str(zone.get("id", "")) != decoration.restored_by_zone_id:
+                    continue
+                if bool(zone.get("restored", False)):
+                    return zone
+            return None
+        return self._restored_zone_near(decoration.x, decoration.y)
 
     def _restored_zone_near(self, world_x: float, world_y: float) -> dict | None:
         for zone in self.snapshot.restoration_zones or []:

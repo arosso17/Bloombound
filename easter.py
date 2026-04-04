@@ -15,7 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
     server_parser.add_argument("--udp-port", type=int)
     server_parser.add_argument("--tick-rate", type=int, default=30)
     server_parser.add_argument("--expected-players", type=int, default=2)
-    server_parser.add_argument("--map-id", default="heart_garden_slice")
+    server_parser.add_argument("--map-id", default="new_map")
     server_parser.add_argument("--net-debug", action="store_true")
 
     client_parser = subparsers.add_parser("client", help="Run a pygame client")
@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     host_parser.add_argument("--tick-rate", type=int, default=30)
     host_parser.add_argument("--expected-players", type=int, default=2)
     host_parser.add_argument("--name", default="Host")
-    host_parser.add_argument("--map-id", default="heart_garden_slice")
+    host_parser.add_argument("--map-id", default="new_map")
     host_parser.add_argument("--net-debug", action="store_true")
 
     return parser

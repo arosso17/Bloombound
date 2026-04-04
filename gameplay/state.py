@@ -42,7 +42,7 @@ def distance(ax: float, ay: float, bx: float, by: float) -> float:
 
 
 class GameState:
-    def __init__(self, expected_players: int = 2, map_id: str = "heart_garden_slice") -> None:
+    def __init__(self, expected_players: int = 2, map_id: str = "new_map") -> None:
         self.map = load_map(map_id)
         self.tick = 0
         self.expected_players = max(1, expected_players)

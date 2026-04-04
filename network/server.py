@@ -30,7 +30,7 @@ class GameServer:
         udp_port: int | None = None,
         tick_rate: int = 30,
         expected_players: int = 2,
-        map_id: str = "heart_garden_slice",
+        map_id: str = "new_map",
         net_debug: bool = False,
     ) -> None:
         self.host = host

@@ -50,6 +50,7 @@ class DecorationDef:
     x: float
     y: float
     scale: float = 1.0
+    restored_by_zone_id: str = ""
 
 
 @dataclass(frozen=True)
