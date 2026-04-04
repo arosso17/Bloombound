@@ -47,6 +47,16 @@ Connect a client:
 python easter.py client --host 127.0.0.1 --port 5050 --name Player
 ```
 
+## Visual Asset Editor
+
+Shape-based visuals live in `assets/visuals/` as JSON files and can be edited with the GUI tool:
+
+```powershell
+python tools/visual_asset_editor.py
+```
+
+The editor saves the same format the game loads at runtime, so authored visuals can be used directly by the client renderer.
+
 ## Controls
 
 - `WASD` move

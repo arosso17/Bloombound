@@ -1,0 +1,9 @@
+{
+  "asset_id": "egg",
+  "canvas": { "width": 40, "height": 56 },
+  "shapes": [
+    { "kind": "ellipse", "x": 7, "y": 6, "width": 26, "height": 38, "fill": [244, 160, 177] },
+    { "kind": "ellipse", "x": 11, "y": 12, "width": 10, "height": 16, "fill": [255, 214, 224] },
+    { "kind": "ellipse", "x": 7, "y": 6, "width": 26, "height": 38, "outline": [219, 114, 143], "outline_width": 2 }
+  ]
+}

@@ -10,6 +10,7 @@ import pygame as pg
 from gameplay.map_loader import load_map
 from gameplay.map_types import MapDefinition
 from gameplay.state import PLAYER_COLORS
+from gameplay.visual_assets import load_visual_asset, render_visual_asset
 from network.shared import read_messages_forever, safe_close, send_message
 
 
@@ -19,20 +20,15 @@ CAMERA_ZOOM = 1.0
 BACKGROUND_COLOR = (232, 228, 214)
 PLAYFIELD_COLOR = (205, 214, 188)
 SHRINE_COLOR = (255, 216, 138)
-EGG_COLOR = (244, 160, 177)
 TEXT_COLOR = (48, 58, 64)
 SPIRIT_COLOR = (188, 234, 255)
 SELF_RING_COLOR = (40, 40, 40)
-ENEMY_COLOR = (77, 104, 72)
-ENEMY_CORE_COLOR = (154, 195, 140)
 HEALTH_BG_COLOR = (233, 222, 212)
 HEALTH_FILL_COLOR = (120, 191, 104)
 LOSS_COLOR = (125, 76, 76)
 WIN_COLOR = (89, 143, 84)
 HEDGE_COLOR = (111, 139, 96)
 HEDGE_ACCENT_COLOR = (140, 171, 122)
-HEART_BLOOM_COLOR = (255, 170, 191)
-HEART_BLOOM_RESTORED_COLOR = (255, 215, 126)
 
 
 @dataclass
@@ -110,6 +106,13 @@ class EasterClientApp:
         self.host_id = ""
         self.can_start = False
         self.current_map: MapDefinition | None = None
+        self.visual_assets = {
+            "shrine": load_visual_asset("shrine"),
+            "egg": load_visual_asset("egg"),
+            "bramble_enemy": load_visual_asset("bramble_enemy"),
+            "heart_bloom_dormant": load_visual_asset("heart_bloom_dormant"),
+            "heart_bloom_restored": load_visual_asset("heart_bloom_restored"),
+        }
 
     def run(self) -> None:
         pg.init()
@@ -246,8 +249,7 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
-            pg.draw.circle(screen, SHRINE_COLOR, (shrine_x, shrine_y), 26)
-            pg.draw.circle(screen, (255, 247, 215), (shrine_x, shrine_y), 42, width=3)
+            render_visual_asset(screen, self.visual_assets["shrine"], (shrine_x, shrine_y))
 
         if self.snapshot.final_bloom:
             bloom_x, bloom_y = self._screen_point(
@@ -256,10 +258,8 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
-            bloom_radius = int(self.snapshot.final_bloom["radius"] * CAMERA_ZOOM)
-            bloom_color = HEART_BLOOM_RESTORED_COLOR if self.snapshot.final_bloom.get("restored") else HEART_BLOOM_COLOR
-            pg.draw.circle(screen, bloom_color, (bloom_x, bloom_y), bloom_radius + 4)
-            pg.draw.circle(screen, (255, 245, 235), (bloom_x, bloom_y), bloom_radius, width=3)
+            bloom_asset = "heart_bloom_restored" if self.snapshot.final_bloom.get("restored") else "heart_bloom_dormant"
+            render_visual_asset(screen, self.visual_assets[bloom_asset], (bloom_x, bloom_y))
 
         if self.snapshot.egg and not self.snapshot.egg.get("collected", False):
             egg_x, egg_y = self._screen_point(
@@ -268,7 +268,7 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
-            pg.draw.ellipse(screen, EGG_COLOR, pg.Rect(egg_x - 10, egg_y - 14, 20, 28))
+            render_visual_asset(screen, self.visual_assets["egg"], (egg_x, egg_y))
 
         if self.snapshot.enemy:
             enemy_x, enemy_y = self._screen_point(
@@ -277,9 +277,7 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
-            enemy_radius = int(self.snapshot.enemy["radius"] * CAMERA_ZOOM)
-            pg.draw.circle(screen, ENEMY_COLOR, (enemy_x, enemy_y), enemy_radius + 3)
-            pg.draw.circle(screen, ENEMY_CORE_COLOR, (enemy_x, enemy_y), max(4, enemy_radius - 4))
+            render_visual_asset(screen, self.visual_assets["bramble_enemy"], (enemy_x, enemy_y))
 
         for player in self.snapshot.players or []:
             px, py = self._screen_point(player["x"], player["y"], playfield_rect, camera_rect)
