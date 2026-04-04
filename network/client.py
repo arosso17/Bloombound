@@ -171,7 +171,7 @@ class EasterClientApp:
             message_type = message.get("type")
             if message_type == "welcome":
                 self.player_id = str(message["player_id"])
-                self._load_map(str(message.get("map_id", "heart_garden")))
+                self._load_map(str(message.get("map_id", "heart_garden_slice")))
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.snapshot.world_width = int(message["world"]["width"])
                 self.snapshot.world_height = int(message["world"]["height"])
@@ -179,7 +179,7 @@ class EasterClientApp:
                 self.connection_closed = False
                 self._send_profile_update()
             elif message_type == "lobby_state":
-                self._load_map(str(message.get("map_id", "heart_garden")))
+                self._load_map(str(message.get("map_id", "heart_garden_slice")))
                 self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
                 self.expected_players = int(message.get("expected_players", 1))
                 self.host_id = str(message.get("host_id", ""))
@@ -187,7 +187,7 @@ class EasterClientApp:
                 self.lobby_players = list(message.get("players", []))
                 self._sync_local_profile_from_lobby()
             elif message_type == "world_snapshot":
-                self._load_map(str(message.get("map_id", "heart_garden")))
+                self._load_map(str(message.get("map_id", "heart_garden_slice")))
                 self.snapshot.tick = int(message.get("tick", 0))
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))

@@ -27,7 +27,7 @@ class GameServer:
         port: int = 5050,
         tick_rate: int = 20,
         expected_players: int = 2,
-        map_id: str = "heart_garden",
+        map_id: str = "heart_garden_slice",
     ) -> None:
         self.host = host
         self.port = port

@@ -99,12 +99,53 @@ class MapEditor:
         canvas_wrap.columnconfigure(0, weight=1)
         canvas_wrap.rowconfigure(1, weight=1)
 
-        inspector = ttk.Frame(self.root, padding=10)
-        inspector.grid(row=0, column=2, sticky="ns")
+        inspector_wrap = ttk.Frame(self.root, padding=10)
+        inspector_wrap.grid(row=0, column=2, sticky="nsew")
+        inspector_wrap.rowconfigure(0, weight=1)
+        inspector_wrap.columnconfigure(0, weight=1)
+
+        self.inspector_canvas = tk.Canvas(inspector_wrap, width=280, highlightthickness=0)
+        self.inspector_canvas.grid(row=0, column=0, sticky="nsew")
+        inspector_scrollbar = ttk.Scrollbar(inspector_wrap, orient="vertical", command=self.inspector_canvas.yview)
+        inspector_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.inspector_canvas.configure(yscrollcommand=inspector_scrollbar.set)
+
+        inspector = ttk.Frame(self.inspector_canvas, padding=2)
+        self.inspector_window = self.inspector_canvas.create_window((0, 0), window=inspector, anchor="nw")
+        inspector.bind("<Configure>", self._on_inspector_frame_configure)
+        self.inspector_canvas.bind("<Configure>", self._on_inspector_canvas_configure)
+        self.inspector_canvas.bind("<Enter>", self._bind_inspector_mousewheel)
+        self.inspector_canvas.bind("<Leave>", self._unbind_inspector_mousewheel)
 
         self._build_sidebar(sidebar)
         self._build_canvas(canvas_wrap)
         self._build_inspector(inspector)
+
+    def _on_inspector_frame_configure(self, _event: tk.Event) -> None:
+        self.inspector_canvas.configure(scrollregion=self.inspector_canvas.bbox("all"))
+
+    def _on_inspector_canvas_configure(self, event: tk.Event) -> None:
+        self.inspector_canvas.itemconfigure(self.inspector_window, width=event.width)
+
+    def _bind_inspector_mousewheel(self, _event: tk.Event) -> None:
+        self.inspector_canvas.bind_all("<MouseWheel>", self._on_inspector_mousewheel)
+        self.inspector_canvas.bind_all("<Button-4>", self._on_inspector_mousewheel_linux_up)
+        self.inspector_canvas.bind_all("<Button-5>", self._on_inspector_mousewheel_linux_down)
+
+    def _unbind_inspector_mousewheel(self, _event: tk.Event) -> None:
+        self.inspector_canvas.unbind_all("<MouseWheel>")
+        self.inspector_canvas.unbind_all("<Button-4>")
+        self.inspector_canvas.unbind_all("<Button-5>")
+
+    def _on_inspector_mousewheel(self, event: tk.Event) -> None:
+        direction = -1 if event.delta > 0 else 1
+        self.inspector_canvas.yview_scroll(direction, "units")
+
+    def _on_inspector_mousewheel_linux_up(self, _event: tk.Event) -> None:
+        self.inspector_canvas.yview_scroll(-1, "units")
+
+    def _on_inspector_mousewheel_linux_down(self, _event: tk.Event) -> None:
+        self.inspector_canvas.yview_scroll(1, "units")
 
     def _build_sidebar(self, parent: ttk.Frame) -> None:
         file_row = ttk.Frame(parent)
