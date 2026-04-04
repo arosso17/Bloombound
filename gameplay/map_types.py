@@ -28,6 +28,15 @@ class EggSpawnDef:
 
 
 @dataclass(frozen=True)
+class DecorationDef:
+    decoration_id: str
+    asset_id: str
+    x: float
+    y: float
+    scale: float = 1.0
+
+
+@dataclass(frozen=True)
 class ShrineDef:
     shrine_id: str
     x: float
@@ -64,6 +73,7 @@ class MapDefinition:
     world_height: int
     player_spawns: list[SpawnPoint]
     collision_rects: list[CollisionRect]
+    decorations: list[DecorationDef]
     egg_spawns: list[EggSpawnDef]
     shrine: ShrineDef
     enemy_spawns: list[EnemySpawnDef]

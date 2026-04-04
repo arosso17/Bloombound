@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MAPS_DIR = REPO_ROOT / "gameplay" / "maps"
+VISUALS_DIR = REPO_ROOT / "assets" / "visuals"
 
 DEFAULT_MAP = {
     "map_id": "new_map",
@@ -16,6 +17,7 @@ DEFAULT_MAP = {
     "world": {"width": 1600, "height": 960},
     "player_spawns": [],
     "collision_rects": [],
+    "decorations": [],
     "egg_spawns": [],
     "shrine": {"shrine_id": "shrine_1", "x": 240.0, "y": 220.0, "interact_radius": 54, "revive_radius": 72},
     "enemy_spawns": [],
@@ -50,11 +52,13 @@ class MapEditor:
             "width": tk.StringVar(value=""),
             "height": tk.StringVar(value=""),
             "radius": tk.StringVar(value=""),
+            "scale": tk.StringVar(value=""),
             "interact_radius": tk.StringVar(value=""),
             "revive_radius": tk.StringVar(value=""),
             "speed": tk.StringVar(value=""),
             "damage_per_second": tk.StringVar(value=""),
             "leash_radius": tk.StringVar(value=""),
+            "asset_id": tk.StringVar(value=""),
             "egg_type": tk.StringVar(value=""),
         }
 
@@ -118,6 +122,7 @@ class MapEditor:
         tool_specs = [
             ("select", "Select"),
             ("collision", "Add Collision"),
+            ("decoration", "Add Decoration"),
             ("player_spawn", "Add Player Spawn"),
             ("egg_spawn", "Add Egg Spawn"),
             ("enemy_spawn", "Add Enemy Spawn"),
@@ -174,11 +179,13 @@ class MapEditor:
             ("width", "Width"),
             ("height", "Height"),
             ("radius", "Radius"),
+            ("scale", "Scale"),
             ("interact_radius", "Interact Radius"),
             ("revive_radius", "Revive Radius"),
             ("speed", "Speed"),
             ("damage_per_second", "Damage / Sec"),
             ("leash_radius", "Leash Radius"),
+            ("asset_id", "Asset ID"),
             ("egg_type", "Egg Type"),
         ]
         base_row = 8
@@ -287,6 +294,10 @@ class MapEditor:
                 obj["rect_id"] = self.property_vars["id"].get().strip() or obj["rect_id"]
                 obj["width"] = max(1.0, self._parse_float_var("width"))
                 obj["height"] = max(1.0, self._parse_float_var("height"))
+            elif section == "decorations":
+                obj["decoration_id"] = self.property_vars["id"].get().strip() or obj["decoration_id"]
+                obj["asset_id"] = self.property_vars["asset_id"].get().strip() or obj["asset_id"]
+                obj["scale"] = max(0.1, self._parse_float_var("scale"))
             elif section == "egg_spawns":
                 obj["spawn_id"] = self.property_vars["id"].get().strip() or obj["spawn_id"]
                 obj["egg_type"] = self.property_vars["egg_type"].get().strip() or obj.get("egg_type", "revival")
@@ -461,6 +472,8 @@ class MapEditor:
         labels: list[tuple[tuple[str, int | None], str]] = []
         for index, rect in enumerate(self.map_data["collision_rects"]):
             labels.append((("collision_rects", index), f"Collision: {rect['rect_id']}"))
+        for index, decoration in enumerate(self.map_data["decorations"]):
+            labels.append((("decorations", index), f"Decoration: {decoration['decoration_id']} ({decoration['asset_id']})"))
         for index, _spawn in enumerate(self.map_data["player_spawns"]):
             labels.append((("player_spawns", index), f"Player Spawn {index + 1}"))
         for index, spawn in enumerate(self.map_data["egg_spawns"]):
@@ -505,15 +518,19 @@ class MapEditor:
         self._set_property("width", obj.get("width", ""))
         self._set_property("height", obj.get("height", ""))
         self._set_property("radius", obj.get("radius", ""))
+        self._set_property("scale", obj.get("scale", ""))
         self._set_property("interact_radius", obj.get("interact_radius", ""))
         self._set_property("revive_radius", obj.get("revive_radius", ""))
         self._set_property("speed", obj.get("speed", ""))
         self._set_property("damage_per_second", obj.get("damage_per_second", ""))
         self._set_property("leash_radius", obj.get("leash_radius", 260.0 if section == "enemy_spawns" else ""))
+        self._set_property("asset_id", obj.get("asset_id", ""))
         self._set_property("egg_type", obj.get("egg_type", ""))
 
         if section == "collision_rects":
             self._set_property("id", obj.get("rect_id", ""))
+        elif section == "decorations":
+            self._set_property("id", obj.get("decoration_id", ""))
         elif section == "egg_spawns":
             self._set_property("id", obj.get("spawn_id", ""))
         elif section == "enemy_spawns":
@@ -558,6 +575,8 @@ class MapEditor:
 
         for index, rect in enumerate(self.map_data["collision_rects"]):
             self._draw_collision_rect(index, rect)
+        for index, decoration in enumerate(self.map_data["decorations"]):
+            self._draw_decoration_marker(index, decoration)
         for index, spawn in enumerate(self.map_data["player_spawns"]):
             self._draw_point_marker(spawn["x"], spawn["y"], "#4f89ff", "P")
         for index, spawn in enumerate(self.map_data["egg_spawns"]):
@@ -597,6 +616,13 @@ class MapEditor:
         radius = 8
         self.canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill, outline="#203040", width=2)
         self.canvas.create_text(x, y - 16, text=label, fill="#203040")
+
+    def _draw_decoration_marker(self, index: int, decoration: dict) -> None:
+        x, y = self._world_to_screen(decoration["x"], decoration["y"])
+        size = max(12, int(14 * float(decoration.get("scale", 1.0))))
+        self.canvas.create_rectangle(x - size, y - size, x + size, y + size, fill="#d89b5f", outline="#6d4320", width=2)
+        self.canvas.create_text(x, y - size - 10, text="D", fill="#203040")
+        self.canvas.create_text(x, y + size + 10, text=decoration.get("asset_id", ""), fill="#6d4320")
 
     def _draw_radius_marker(self, obj: dict, fill: str, label: str) -> None:
         x, y = self._world_to_screen(obj["x"], obj["y"])
@@ -657,6 +683,7 @@ class MapEditor:
     def _iter_hit_test_objects(self) -> list[tuple[tuple[str, int | None], dict]]:
         objects: list[tuple[tuple[str, int | None], dict]] = []
         objects.extend((("collision_rects", index), rect) for index, rect in enumerate(self.map_data["collision_rects"]))
+        objects.extend((("decorations", index), decoration) for index, decoration in enumerate(self.map_data["decorations"]))
         objects.extend((("player_spawns", index), spawn) for index, spawn in enumerate(self.map_data["player_spawns"]))
         objects.extend((("egg_spawns", index), spawn) for index, spawn in enumerate(self.map_data["egg_spawns"]))
         objects.append((("shrine", None), self.map_data["shrine"]))
@@ -747,6 +774,18 @@ class MapEditor:
             self.map_data["collision_rects"].append(new_obj)
             self._select_object_ref(("collision_rects", len(self.map_data["collision_rects"]) - 1))
             return
+        if tool == "decoration":
+            self.map_data["decorations"].append(
+                {
+                    "decoration_id": self._next_id("decorations", "decoration_id", "decoration"),
+                    "asset_id": self._default_asset_id(),
+                    "x": world_x,
+                    "y": world_y,
+                    "scale": 1.0,
+                }
+            )
+            self._select_object_ref(("decorations", len(self.map_data["decorations"]) - 1))
+            return
         if tool == "player_spawn":
             self.map_data["player_spawns"].append({"x": world_x, "y": world_y})
             self._select_object_ref(("player_spawns", len(self.map_data["player_spawns"]) - 1))
@@ -794,6 +833,12 @@ class MapEditor:
             index += 1
         return f"{prefix}_{index}"
 
+    def _default_asset_id(self) -> str:
+        visual_paths = sorted(VISUALS_DIR.glob("*.json"))
+        if not visual_paths:
+            return "decoration_asset"
+        return visual_paths[0].stem
+
     def _world_to_screen(self, world_x: float, world_y: float) -> tuple[float, float]:
         return ((world_x - self.camera_x) * self.preview_scale, (world_y - self.camera_y) * self.preview_scale)
 
@@ -838,6 +883,7 @@ class MapEditor:
     def _load_map_path(self, path: Path) -> None:
         self.map_path = path
         self.map_data = json.loads(path.read_text(encoding="utf-8"))
+        self.map_data.setdefault("decorations", [])
         self.selected_ref = None
         self.drag_mode = None
         self.drag_handle = None

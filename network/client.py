@@ -242,6 +242,7 @@ class EasterClientApp:
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
         self._draw_map_geometry(screen, playfield_rect, camera_rect)
+        self._draw_map_decorations(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
             shrine_x, shrine_y = self._screen_point(
@@ -462,6 +463,23 @@ class EasterClientApp:
             if accent_rect.width > 0 and accent_rect.height > 0:
                 pg.draw.rect(screen, HEDGE_ACCENT_COLOR, accent_rect, border_radius=10)
 
+    def _draw_map_decorations(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        if self.current_map is None:
+            return
+
+        for decoration in self.current_map.decorations:
+            if not self._world_point_visible(decoration.x, decoration.y, playfield_rect, camera_rect, margin=96):
+                continue
+            try:
+                asset = load_visual_asset(decoration.asset_id)
+            except FileNotFoundError:
+                dx, dy = self._screen_point(decoration.x, decoration.y, playfield_rect, camera_rect)
+                pg.draw.rect(screen, (216, 155, 95), pg.Rect(dx - 10, dy - 10, 20, 20), border_radius=4)
+                pg.draw.rect(screen, (109, 67, 32), pg.Rect(dx - 10, dy - 10, 20, 20), width=2, border_radius=4)
+                continue
+            dx, dy = self._screen_point(decoration.x, decoration.y, playfield_rect, camera_rect)
+            render_visual_asset(screen, asset, (dx, dy), scale=max(0.1, decoration.scale))
+
     def _screen_rect(
         self,
         world_x: float,
@@ -478,6 +496,21 @@ class EasterClientApp:
         if clipped.width <= 0 or clipped.height <= 0:
             return None
         return clipped
+
+    def _world_point_visible(
+        self,
+        world_x: float,
+        world_y: float,
+        playfield_rect: pg.Rect,
+        camera_rect: pg.Rect,
+        *,
+        margin: int = 0,
+    ) -> bool:
+        screen_x, screen_y = self._screen_point(world_x, world_y, playfield_rect, camera_rect)
+        return (
+            playfield_rect.left - margin <= screen_x <= playfield_rect.right + margin
+            and playfield_rect.top - margin <= screen_y <= playfield_rect.bottom + margin
+        )
 
     def _load_map(self, map_id: str) -> None:
         if self.current_map is not None and self.current_map.map_id == map_id:
