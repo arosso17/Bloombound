@@ -28,6 +28,14 @@ class EggSpawnDef:
 
 
 @dataclass(frozen=True)
+class PatrolPointDef:
+    point_id: str
+    enemy_id: str
+    x: float
+    y: float
+
+
+@dataclass(frozen=True)
 class DecorationDef:
     decoration_id: str
     asset_id: str
@@ -54,6 +62,30 @@ class EnemySpawnDef:
     speed: float = 150.0
     damage_per_second: float = 40.0
     leash_radius: float = 260.0
+    aggro_radius: float = 220.0
+    alert_duration_ticks: int = 80
+
+
+@dataclass(frozen=True)
+class RestorationZoneDef:
+    zone_id: str
+    x: float
+    y: float
+    radius: float = 72.0
+    interact_radius: float = 84.0
+    required_egg_type: str = "restoration"
+    restore_cost: int = 1
+
+
+@dataclass(frozen=True)
+class HazardZoneDef:
+    zone_id: str
+    x: float
+    y: float
+    radius: float = 84.0
+    damage_per_second: float = 18.0
+    slow_multiplier: float = 0.72
+    cleared_by_zone_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -74,7 +106,10 @@ class MapDefinition:
     player_spawns: list[SpawnPoint]
     collision_rects: list[CollisionRect]
     decorations: list[DecorationDef]
+    patrol_points: list[PatrolPointDef]
     egg_spawns: list[EggSpawnDef]
+    restoration_zones: list[RestorationZoneDef]
+    hazard_zones: list[HazardZoneDef]
     shrine: ShrineDef
     enemy_spawns: list[EnemySpawnDef]
     final_bloom: FinalBloomDef

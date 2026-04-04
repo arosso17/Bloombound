@@ -1,0 +1,280 @@
+{
+  "map_id": "heart_garden_slice",
+  "name": "Heart Garden Slice",
+  "world": {
+    "width": 1600,
+    "height": 960
+  },
+  "player_spawns": [
+    {
+      "x": 182.0,
+      "y": 196.0
+    },
+    {
+      "x": 252.0,
+      "y": 196.0
+    },
+    {
+      "x": 182.0,
+      "y": 266.0
+    },
+    {
+      "x": 252.0,
+      "y": 266.0
+    }
+  ],
+  "collision_rects": [
+    {
+      "rect_id": "north_hedge",
+      "x": 330.0,
+      "y": 140.0,
+      "width": 940.0,
+      "height": 34.0
+    },
+    {
+      "rect_id": "west_hedge",
+      "x": 330.0,
+      "y": 174.0,
+      "width": 34.0,
+      "height": 566.0
+    },
+    {
+      "rect_id": "mid_wall_a",
+      "x": 472.0,
+      "y": 236.0,
+      "width": 38.0,
+      "height": 298.0
+    },
+    {
+      "rect_id": "mid_wall_b",
+      "x": 472.0,
+      "y": 624.0,
+      "width": 38.0,
+      "height": 116.0
+    },
+    {
+      "rect_id": "pond_bank_top",
+      "x": 664.0,
+      "y": 236.0,
+      "width": 262.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "pond_bank_left",
+      "x": 664.0,
+      "y": 236.0,
+      "width": 40.0,
+      "height": 244.0
+    },
+    {
+      "rect_id": "pond_bank_right",
+      "x": 886.0,
+      "y": 236.0,
+      "width": 40.0,
+      "height": 244.0
+    },
+    {
+      "rect_id": "greenhouse",
+      "x": 1088.0,
+      "y": 236.0,
+      "width": 196.0,
+      "height": 208.0
+    },
+    {
+      "rect_id": "south_hedge_a",
+      "x": 602.0,
+      "y": 596.0,
+      "width": 278.0,
+      "height": 34.0
+    },
+    {
+      "rect_id": "south_hedge_b",
+      "x": 980.0,
+      "y": 596.0,
+      "width": 304.0,
+      "height": 34.0
+    },
+    {
+      "rect_id": "east_channel",
+      "x": 1260.0,
+      "y": 470.0,
+      "width": 34.0,
+      "height": 224.0
+    },
+    {
+      "rect_id": "heart_chamber_left",
+      "x": 1118.0,
+      "y": 726.0,
+      "width": 34.0,
+      "height": 128.0
+    },
+    {
+      "rect_id": "heart_chamber_right",
+      "x": 1320.0,
+      "y": 726.0,
+      "width": 34.0,
+      "height": 128.0
+    },
+    {
+      "rect_id": "heart_chamber_top",
+      "x": 1118.0,
+      "y": 726.0,
+      "width": 236.0,
+      "height": 34.0
+    }
+  ],
+  "decorations": [],
+  "patrol_points": [
+    {
+      "point_id": "patrol_1a",
+      "enemy_id": "bramble_1",
+      "x": 1392.0,
+      "y": 294.0
+    },
+    {
+      "point_id": "patrol_1b",
+      "enemy_id": "bramble_1",
+      "x": 1426.0,
+      "y": 542.0
+    },
+    {
+      "point_id": "patrol_2a",
+      "enemy_id": "bramble_2",
+      "x": 612.0,
+      "y": 352.0
+    },
+    {
+      "point_id": "patrol_2b",
+      "enemy_id": "bramble_2",
+      "x": 826.0,
+      "y": 532.0
+    },
+    {
+      "point_id": "patrol_3a",
+      "enemy_id": "bramble_3",
+      "x": 1040.0,
+      "y": 520.0
+    },
+    {
+      "point_id": "patrol_3b",
+      "enemy_id": "bramble_3",
+      "x": 1208.0,
+      "y": 648.0
+    }
+  ],
+  "egg_spawns": [
+    {
+      "spawn_id": "egg_north_revival",
+      "x": 560.0,
+      "y": 206.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "egg_greenhouse_restore",
+      "x": 1380.0,
+      "y": 230.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "egg_pond_revival",
+      "x": 792.0,
+      "y": 372.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "egg_south_restore",
+      "x": 1108.0,
+      "y": 668.0,
+      "egg_type": "restoration"
+    }
+  ],
+  "restoration_zones": [
+    {
+      "zone_id": "restore_pond",
+      "x": 764.0,
+      "y": 520.0,
+      "radius": 70.0,
+      "interact_radius": 84.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_chamber",
+      "x": 1200.0,
+      "y": 690.0,
+      "radius": 76.0,
+      "interact_radius": 92.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    }
+  ],
+  "hazard_zones": [
+    {
+      "zone_id": "hazard_pond",
+      "x": 804.0,
+      "y": 534.0,
+      "radius": 118.0,
+      "damage_per_second": 16.0,
+      "slow_multiplier": 0.72,
+      "cleared_by_zone_id": "restore_pond"
+    },
+    {
+      "zone_id": "hazard_chamber",
+      "x": 1200.0,
+      "y": 812.0,
+      "radius": 104.0,
+      "damage_per_second": 20.0,
+      "slow_multiplier": 0.68,
+      "cleared_by_zone_id": "restore_chamber"
+    }
+  ],
+  "shrine": {
+    "shrine_id": "shrine_hub",
+    "x": 224.0,
+    "y": 228.0,
+    "interact_radius": 54,
+    "revive_radius": 72
+  },
+  "enemy_spawns": [
+    {
+      "enemy_id": "bramble_1",
+      "x": 1440.0,
+      "y": 442.0,
+      "radius": 18.0,
+      "speed": 150.0,
+      "damage_per_second": 40.0,
+      "leash_radius": 320.0,
+      "aggro_radius": 220.0,
+      "alert_duration_ticks": 90
+    },
+    {
+      "enemy_id": "bramble_2",
+      "x": 576.0,
+      "y": 400.0,
+      "radius": 18.0,
+      "speed": 150.0,
+      "damage_per_second": 40.0,
+      "leash_radius": 280.0,
+      "aggro_radius": 210.0,
+      "alert_duration_ticks": 80
+    },
+    {
+      "enemy_id": "bramble_3",
+      "x": 992.0,
+      "y": 496.0,
+      "radius": 18.0,
+      "speed": 150.0,
+      "damage_per_second": 40.0,
+      "leash_radius": 300.0,
+      "aggro_radius": 220.0,
+      "alert_duration_ticks": 80
+    }
+  ],
+  "final_bloom": {
+    "bloom_id": "heart_bloom",
+    "x": 1236.0,
+    "y": 818.0,
+    "radius": 26,
+    "interact_radius": 74
+  }
+}

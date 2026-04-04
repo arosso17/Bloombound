@@ -3,7 +3,16 @@ from __future__ import annotations
 import math
 
 from gameplay.collision import move_circle
-from gameplay.entities import EggState, EnemyState, FinalBloomState, PlayerInput, PlayerState, ShrineState
+from gameplay.entities import (
+    EggState,
+    EnemyState,
+    FinalBloomState,
+    HazardZoneState,
+    PlayerInput,
+    PlayerState,
+    RestorationZoneState,
+    ShrineState,
+)
 from gameplay.map_loader import load_map
 from gameplay.navigation import NavGrid, find_path
 
@@ -14,6 +23,8 @@ NAV_CELL_SIZE = 40
 ENEMY_PATH_RECALC_TICKS = 8
 ENEMY_WAYPOINT_REACHED_DISTANCE = 10.0
 ENEMY_HOME_IDLE_DISTANCE = 8.0
+ENEMY_PATROL_REACHED_DISTANCE = 12.0
+DEFAULT_HAZARD_SLOW_MULTIPLIER = 1.0
 PLAYER_COLORS = [
     (242, 119, 119),
     (112, 193, 179),
@@ -46,7 +57,10 @@ class GameState:
         )
         self.enemy_paths: dict[str, list[tuple[int, int]]] = {}
         self.enemy_path_targets: dict[str, tuple[int, int]] = {}
+        self.enemy_patrol_routes = self._build_enemy_patrol_routes()
         self.eggs = self._build_eggs_from_map()
+        self.restoration_zones = self._build_restoration_zones_from_map()
+        self.hazard_zones = self._build_hazard_zones_from_map()
         shrine_def = self.map.shrine
         self.shrine = ShrineState(
             shrine_def.shrine_id,
@@ -99,6 +113,8 @@ class GameState:
         self.tick = 0
         self.final_bloom.restored = False
         self._reset_eggs()
+        self._reset_restoration_zones()
+        self._reset_hazard_zones()
         self._reset_enemies()
         for index, player in enumerate(self.players.values()):
             spawn = self.map.player_spawns[index % len(self.map.player_spawns)]
@@ -107,6 +123,8 @@ class GameState:
             player.state = "alive"
             player.health = player.max_health
             player.revival_eggs = 0
+            player.restoration_eggs = 0
+            player.hazard_slow_multiplier = DEFAULT_HAZARD_SLOW_MULTIPLIER
             player.input_state = PlayerInput()
             player.prev_input_state = PlayerInput()
         return True
@@ -151,8 +169,10 @@ class GameState:
 
     def update(self, dt: float) -> None:
         self.tick += 1
+        self._sync_hazard_state()
         for player in self.players.values():
             self._update_player(player, dt)
+        self._update_environment_effects(dt)
         self._update_enemies(dt)
         for player in self.players.values():
             player.prev_input_state = PlayerInput(
@@ -176,6 +196,8 @@ class GameState:
             "world": {"width": self.map.world_width, "height": self.map.world_height},
             "players": [self._player_snapshot(player) for player in self.players.values()],
             "eggs": [egg.to_dict() for egg in self.eggs],
+            "restoration_zones": [zone.to_dict() for zone in self.restoration_zones],
+            "hazard_zones": [zone.to_dict() for zone in self.hazard_zones],
             "shrine": self.shrine.to_dict(),
             "enemies": [enemy.to_dict() for enemy in self.enemies],
             "final_bloom": self.final_bloom.to_dict(),
@@ -185,6 +207,7 @@ class GameState:
     def _player_snapshot(self, player: PlayerState) -> dict:
         payload = player.to_dict()
         payload["color"] = list(PLAYER_COLORS[player.color_index])
+        payload["hazard_slow_multiplier"] = round(player.hazard_slow_multiplier, 2)
         return payload
 
     def _update_player(self, player: PlayerState, dt: float) -> None:
@@ -195,7 +218,9 @@ class GameState:
             move_x /= magnitude
             move_y /= magnitude
 
+        player.hazard_slow_multiplier = self._hazard_slow_multiplier_at(player.x, player.y)
         speed = SPIRIT_SPEED if player.state == "spirit" else ALIVE_SPEED
+        speed *= player.hazard_slow_multiplier
         player.x, player.y = move_circle(
             x=player.x,
             y=player.y,
@@ -215,46 +240,26 @@ class GameState:
 
         if self._pressed(player, "interact"):
             if not self._try_revive(player):
-                self._try_restore_final_bloom(player)
+                if not self._try_restore_zone(player):
+                    self._try_restore_final_bloom(player)
 
-    def _pressed(self, player: PlayerState, attr: str) -> bool:
-        return getattr(player.input_state, attr) and not getattr(player.prev_input_state, attr)
+    def _update_environment_effects(self, dt: float) -> None:
+        for player in self.players.values():
+            player.hazard_slow_multiplier = self._hazard_slow_multiplier_at(player.x, player.y)
+            if player.state != "alive":
+                continue
 
-    def _try_revive(self, player: PlayerState) -> bool:
-        if player.state != "alive" or player.revival_eggs <= 0:
-            return False
-        if distance(player.x, player.y, self.shrine.x, self.shrine.y) > self.shrine.interact_radius:
-            return False
-
-        spirit_targets = [
-            spirit
-            for spirit in self.players.values()
-            if spirit.state == "spirit"
-            and distance(spirit.x, spirit.y, self.shrine.x, self.shrine.y) <= self.shrine.revive_radius
-        ]
-        if not spirit_targets:
-            return False
-
-        revived = min(
-            spirit_targets,
-            key=lambda spirit: distance(spirit.x, spirit.y, self.shrine.x, self.shrine.y),
-        )
-        player.revival_eggs -= 1
-        revived.state = "alive"
-        revived.health = revived.max_health // 2
-        revived.x = self.shrine.x + 36.0
-        revived.y = self.shrine.y
-        return True
-
-    def _try_restore_final_bloom(self, player: PlayerState) -> bool:
-        if player.state != "alive" or player.revival_eggs <= 0:
-            return False
-        if distance(player.x, player.y, self.final_bloom.x, self.final_bloom.y) > self.final_bloom.interact_radius:
-            return False
-
-        player.revival_eggs -= 1
-        self.final_bloom.restored = True
-        return True
+            hazard_damage = 0.0
+            for hazard in self.hazard_zones:
+                if not hazard.active:
+                    continue
+                if distance(player.x, player.y, hazard.x, hazard.y) <= player.radius + hazard.radius:
+                    hazard_damage += hazard.damage_per_second * dt
+            if hazard_damage > 0.0:
+                player.health = max(0, int(player.health - hazard_damage))
+                if player.health <= 0:
+                    self._set_player_spirit(player)
+                    continue
 
     def _update_enemies(self, dt: float) -> None:
         alive_targets = [player for player in self.players.values() if player.state == "alive"]
@@ -263,10 +268,14 @@ class GameState:
 
         for enemy in self.enemies:
             goal_x, goal_y, target = self._enemy_goal(enemy, alive_targets)
-            if target is None and distance(enemy.x, enemy.y, enemy.home_x, enemy.home_y) <= ENEMY_HOME_IDLE_DISTANCE:
+            if (
+                target is None
+                and enemy.state == "return"
+                and distance(enemy.x, enemy.y, enemy.home_x, enemy.home_y) <= ENEMY_HOME_IDLE_DISTANCE
+            ):
+                enemy.state = "patrol"
                 self.enemy_paths[enemy.enemy_id] = []
                 self.enemy_path_targets.pop(enemy.enemy_id, None)
-                continue
 
             path = self._path_for_enemy(enemy, goal_x, goal_y)
             waypoint_x, waypoint_y = self._enemy_waypoint(enemy, goal_x, goal_y, path)
@@ -298,17 +307,40 @@ class GameState:
         enemy: EnemyState,
         alive_targets: list[PlayerState],
     ) -> tuple[float, float, PlayerState | None]:
-        in_range_targets = [
+        visible_targets = [
             player
             for player in alive_targets
-            if distance(player.x, player.y, enemy.home_x, enemy.home_y) <= enemy.leash_radius
+            if distance(player.x, player.y, enemy.x, enemy.y) <= enemy.aggro_radius
+            and distance(player.x, player.y, enemy.home_x, enemy.home_y) <= enemy.leash_radius
         ]
-        if in_range_targets:
+        if visible_targets:
             target = min(
-                in_range_targets,
+                visible_targets,
                 key=lambda player: distance(player.x, player.y, enemy.x, enemy.y),
             )
+            enemy.state = "chase"
+            enemy.target_player_id = target.player_id
+            enemy.alert_ticks_remaining = enemy.alert_duration_ticks
+            enemy.last_known_x = target.x
+            enemy.last_known_y = target.y
             return target.x, target.y, target
+
+        if enemy.alert_ticks_remaining > 0 and (enemy.state == "chase" or enemy.state == "alert"):
+            enemy.state = "alert"
+            enemy.alert_ticks_remaining -= 1
+            return enemy.last_known_x, enemy.last_known_y, None
+
+        enemy.target_player_id = ""
+        patrol_route = self.enemy_patrol_routes.get(enemy.enemy_id, [])
+        if patrol_route:
+            goal_x, goal_y = patrol_route[enemy.patrol_index]
+            if distance(enemy.x, enemy.y, goal_x, goal_y) <= ENEMY_PATROL_REACHED_DISTANCE:
+                enemy.patrol_index = (enemy.patrol_index + 1) % len(patrol_route)
+                goal_x, goal_y = patrol_route[enemy.patrol_index]
+            enemy.state = "patrol"
+            return goal_x, goal_y, None
+
+        enemy.state = "return"
         return enemy.home_x, enemy.home_y, None
 
     def _path_for_enemy(self, enemy: EnemyState, goal_x: float, goal_y: float) -> list[tuple[int, int]]:
@@ -366,12 +398,70 @@ class GameState:
         waypoint_x, waypoint_y = self.nav_grid.cell_center(waypoint_cell)
         return waypoint_x, waypoint_y
 
+    def _pressed(self, player: PlayerState, attr: str) -> bool:
+        return getattr(player.input_state, attr) and not getattr(player.prev_input_state, attr)
+
+    def _try_revive(self, player: PlayerState) -> bool:
+        if player.state != "alive" or player.revival_eggs <= 0:
+            return False
+        if distance(player.x, player.y, self.shrine.x, self.shrine.y) > self.shrine.interact_radius:
+            return False
+
+        spirit_targets = [
+            spirit
+            for spirit in self.players.values()
+            if spirit.state == "spirit"
+            and distance(spirit.x, spirit.y, self.shrine.x, self.shrine.y) <= self.shrine.revive_radius
+        ]
+        if not spirit_targets:
+            return False
+
+        revived = min(
+            spirit_targets,
+            key=lambda spirit: distance(spirit.x, spirit.y, self.shrine.x, self.shrine.y),
+        )
+        self._consume_carried_eggs(player, "revival", 1)
+        revived.state = "alive"
+        revived.health = revived.max_health // 2
+        revived.x = self.shrine.x + 36.0
+        revived.y = self.shrine.y
+        return True
+
+    def _try_restore_zone(self, player: PlayerState) -> bool:
+        if player.state != "alive":
+            return False
+        for zone in self.restoration_zones:
+            if zone.restored:
+                continue
+            if distance(player.x, player.y, zone.x, zone.y) > zone.interact_radius:
+                continue
+            if not self._has_eggs(player, zone.required_egg_type, zone.restore_cost):
+                continue
+            self._consume_carried_eggs(player, zone.required_egg_type, zone.restore_cost)
+            zone.restored = True
+            self._sync_hazard_state()
+            return True
+        return False
+
+    def _try_restore_final_bloom(self, player: PlayerState) -> bool:
+        bloom_egg_type = self._final_bloom_egg_type()
+        if player.state != "alive" or not self._has_eggs(player, bloom_egg_type, 1):
+            return False
+        if distance(player.x, player.y, self.final_bloom.x, self.final_bloom.y) > self.final_bloom.interact_radius:
+            return False
+        if any(not zone.restored for zone in self.restoration_zones):
+            return False
+
+        self._consume_carried_eggs(player, bloom_egg_type, 1)
+        self.final_bloom.restored = True
+        return True
+
     def _set_player_spirit(self, player: PlayerState) -> None:
         if player.state == "spirit":
             return
-        if player.revival_eggs > 0:
-            self._drop_carried_eggs(player)
-            player.revival_eggs = 0
+        self._drop_carried_eggs(player)
+        player.revival_eggs = 0
+        player.restoration_eggs = 0
         player.state = "spirit"
         player.health = 0
 
@@ -387,6 +477,40 @@ class GameState:
             for spawn in self.map.egg_spawns
         ]
 
+    def _build_restoration_zones_from_map(self) -> list[RestorationZoneState]:
+        return [
+            RestorationZoneState(
+                zone_id=zone.zone_id,
+                x=zone.x,
+                y=zone.y,
+                radius=zone.radius,
+                interact_radius=zone.interact_radius,
+                required_egg_type=zone.required_egg_type,
+                restore_cost=zone.restore_cost,
+            )
+            for zone in self.map.restoration_zones
+        ]
+
+    def _build_hazard_zones_from_map(self) -> list[HazardZoneState]:
+        return [
+            HazardZoneState(
+                zone_id=zone.zone_id,
+                x=zone.x,
+                y=zone.y,
+                radius=zone.radius,
+                damage_per_second=zone.damage_per_second,
+                slow_multiplier=zone.slow_multiplier,
+                cleared_by_zone_id=zone.cleared_by_zone_id,
+            )
+            for zone in self.map.hazard_zones
+        ]
+
+    def _build_enemy_patrol_routes(self) -> dict[str, list[tuple[float, float]]]:
+        routes: dict[str, list[tuple[float, float]]] = {enemy.enemy_id: [] for enemy in self.map.enemy_spawns}
+        for point in self.map.patrol_points:
+            routes.setdefault(point.enemy_id, []).append((point.x, point.y))
+        return routes
+
     def _build_enemies_from_map(self) -> list[EnemyState]:
         return [
             EnemyState(
@@ -399,6 +523,10 @@ class GameState:
                 speed=spawn.speed,
                 damage_per_second=spawn.damage_per_second,
                 leash_radius=spawn.leash_radius,
+                aggro_radius=spawn.aggro_radius,
+                alert_duration_ticks=spawn.alert_duration_ticks,
+                last_known_x=spawn.x,
+                last_known_y=spawn.y,
             )
             for spawn in self.map.enemy_spawns
         ]
@@ -406,10 +534,25 @@ class GameState:
     def _reset_eggs(self) -> None:
         self.eggs = self._build_eggs_from_map()
 
+    def _reset_restoration_zones(self) -> None:
+        self.restoration_zones = self._build_restoration_zones_from_map()
+
+    def _reset_hazard_zones(self) -> None:
+        self.hazard_zones = self._build_hazard_zones_from_map()
+        self._sync_hazard_state()
+
     def _reset_enemies(self) -> None:
         self.enemies = self._build_enemies_from_map()
         self.enemy_paths = {}
         self.enemy_path_targets = {}
+
+    def _sync_hazard_state(self) -> None:
+        restored_lookup = {zone.zone_id: zone.restored for zone in self.restoration_zones}
+        for hazard in self.hazard_zones:
+            if hazard.cleared_by_zone_id:
+                hazard.active = not restored_lookup.get(hazard.cleared_by_zone_id, False)
+            else:
+                hazard.active = True
 
     def _try_collect_eggs(self, player: PlayerState) -> None:
         for egg in self.eggs:
@@ -417,14 +560,48 @@ class GameState:
                 continue
             if distance(player.x, player.y, egg.x, egg.y) <= player.radius + egg.radius:
                 egg.collected = True
-                player.revival_eggs += 1
+                egg.carrier_player_id = player.player_id
+                if egg.egg_type == "restoration":
+                    player.restoration_eggs += 1
+                else:
+                    player.revival_eggs += 1
 
     def _drop_carried_eggs(self, player: PlayerState) -> None:
-        collectible_eggs = [egg for egg in self.eggs if egg.collected]
-        for egg in collectible_eggs[: player.revival_eggs]:
+        carried_eggs = [egg for egg in self.eggs if egg.collected and egg.carrier_player_id == player.player_id]
+        for egg in carried_eggs:
             egg.collected = False
+            egg.carrier_player_id = ""
             egg.x = round(player.x, 2)
             egg.y = round(player.y, 2)
+
+    def _consume_carried_eggs(self, player: PlayerState, egg_type: str, amount: int) -> None:
+        remaining = amount
+        for egg in self.eggs:
+            if remaining <= 0:
+                break
+            if not egg.collected or egg.carrier_player_id != player.player_id or egg.egg_type != egg_type:
+                continue
+            egg.carrier_player_id = ""
+            remaining -= 1
+
+        if egg_type == "restoration":
+            player.restoration_eggs = max(0, player.restoration_eggs - amount)
+        else:
+            player.revival_eggs = max(0, player.revival_eggs - amount)
+
+    def _has_eggs(self, player: PlayerState, egg_type: str, amount: int) -> bool:
+        if egg_type == "restoration":
+            return player.restoration_eggs >= amount
+        return player.revival_eggs >= amount
+
+    def _hazard_slow_multiplier_at(self, x: float, y: float) -> float:
+        multiplier = DEFAULT_HAZARD_SLOW_MULTIPLIER
+        for hazard in self.hazard_zones:
+            if not hazard.active:
+                continue
+            if distance(x, y, hazard.x, hazard.y) <= hazard.radius:
+                multiplier = min(multiplier, hazard.slow_multiplier)
+        return multiplier
 
     def _objective_text(self) -> str:
         if self.match_phase == "won":
@@ -432,9 +609,15 @@ class GameState:
         if self.match_phase == "lost":
             return "All caretakers became spirits. Press Enter as host to retry."
         if any(player.state == "spirit" for player in self.players.values()):
-            return "Carry the revival egg to the shrine to revive a teammate."
-        if any(player.revival_eggs > 0 for player in self.players.values()):
-            return "Carry the revival egg to the Heart Bloom to complete the map."
+            return "Use a revival egg at the shrine to bring back a teammate."
+        unrestored_count = sum(1 for zone in self.restoration_zones if not zone.restored)
+        if unrestored_count > 0:
+            return f"Restore the garden circles with restoration eggs. Zones left: {unrestored_count}."
         if any(not egg.collected for egg in self.eggs):
-            return "Gather the map's revival eggs before the brambles catch you."
-        return "Bring your collected eggs to the Heart Bloom to complete the map."
+            return f"Gather the remaining eggs and bring a {self._final_bloom_egg_type()} egg to the Heart Bloom."
+        return f"All zones are restored. Bring a {self._final_bloom_egg_type()} egg to the Heart Bloom."
+
+    def _final_bloom_egg_type(self) -> str:
+        if self.restoration_zones or any(egg.egg_type == "restoration" for egg in self.eggs):
+            return "restoration"
+        return "revival"

@@ -29,6 +29,18 @@ LOSS_COLOR = (125, 76, 76)
 WIN_COLOR = (89, 143, 84)
 HEDGE_COLOR = (111, 139, 96)
 HEDGE_ACCENT_COLOR = (140, 171, 122)
+REVIVAL_EGG_COLOR = (244, 173, 208)
+RESTORATION_EGG_COLOR = (143, 214, 181)
+HAZARD_FILL_COLOR = (164, 88, 88, 72)
+HAZARD_OUTLINE_COLOR = (132, 61, 61)
+RESTORATION_FILL_COLOR = (122, 174, 122, 58)
+RESTORATION_OUTLINE_COLOR = (81, 132, 84)
+RESTORATION_RESTORED_FILL = (160, 216, 156, 92)
+RESTORATION_RESTORED_OUTLINE = (58, 117, 65)
+ENEMY_PATROL_RING = (86, 118, 78)
+ENEMY_ALERT_RING = (224, 162, 81)
+ENEMY_CHASE_RING = (198, 83, 83)
+ENEMY_RETURN_RING = (120, 105, 84)
 
 
 @dataclass
@@ -39,6 +51,8 @@ class ClientSnapshot:
     match_phase: str = "lobby"
     players: list[dict] | None = None
     eggs: list[dict] | None = None
+    restoration_zones: list[dict] | None = None
+    hazard_zones: list[dict] | None = None
     shrine: dict | None = None
     enemies: list[dict] | None = None
     final_bloom: dict | None = None
@@ -97,7 +111,7 @@ class EasterClientApp:
         self.name_input = name[:24]
         self.selected_color_index = 0
         self.profile_initialized = False
-        self.snapshot = ClientSnapshot(players=[], eggs=[], shrine=None, enemies=[])
+        self.snapshot = ClientSnapshot(players=[], eggs=[], restoration_zones=[], hazard_zones=[], shrine=None, enemies=[])
         self.connected = False
         self.connection_closed = False
         self.input_seq = 0
@@ -178,6 +192,8 @@ class EasterClientApp:
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.eggs = list(message.get("eggs", []))
+                self.snapshot.restoration_zones = list(message.get("restoration_zones", []))
+                self.snapshot.hazard_zones = list(message.get("hazard_zones", []))
                 self.snapshot.shrine = message.get("shrine")
                 self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
@@ -242,6 +258,8 @@ class EasterClientApp:
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
         self._draw_map_geometry(screen, playfield_rect, camera_rect)
+        self._draw_hazard_zones(screen, playfield_rect, camera_rect)
+        self._draw_restoration_zones(screen, playfield_rect, camera_rect, small_font)
         self._draw_map_decorations(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
@@ -272,6 +290,8 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
+            egg_color = RESTORATION_EGG_COLOR if egg.get("egg_type") == "restoration" else REVIVAL_EGG_COLOR
+            pg.draw.circle(screen, egg_color, (egg_x, egg_y), 14, width=3)
             render_visual_asset(screen, self.visual_assets["egg"], (egg_x, egg_y))
 
         for enemy in self.snapshot.enemies or []:
@@ -281,6 +301,13 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
+            ring_color = {
+                "patrol": ENEMY_PATROL_RING,
+                "alert": ENEMY_ALERT_RING,
+                "chase": ENEMY_CHASE_RING,
+                "return": ENEMY_RETURN_RING,
+            }.get(str(enemy.get("state", "patrol")), ENEMY_PATROL_RING)
+            pg.draw.circle(screen, ring_color, (enemy_x, enemy_y), int(enemy["radius"]) + 10, width=3)
             render_visual_asset(screen, self.visual_assets["bramble_enemy"], (enemy_x, enemy_y))
 
         for player in self.snapshot.players or []:
@@ -304,7 +331,7 @@ class EasterClientApp:
             if player["id"] == self.player_id:
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
             name_surf = small_font.render(
-                f"{player['name']} ({player['revival_eggs']})",
+                f"{player['name']} (R{player['revival_eggs']} S{player.get('restoration_eggs', 0)})",
                 True,
                 TEXT_COLOR,
             )
@@ -321,6 +348,8 @@ class EasterClientApp:
                     pg.Rect(bar_rect.left, bar_rect.top, int(bar_width * health_ratio), bar_height),
                     border_radius=4,
                 )
+                if float(player.get("hazard_slow_multiplier", 1.0)) < 1.0:
+                    pg.draw.circle(screen, HAZARD_OUTLINE_COLOR, (px, py), ring_radius + 6, width=2)
 
         title = font.render("Bloombound Networking Prototype", True, TEXT_COLOR)
         if self.connected:
@@ -463,6 +492,47 @@ class EasterClientApp:
             if accent_rect.width > 0 and accent_rect.height > 0:
                 pg.draw.rect(screen, HEDGE_ACCENT_COLOR, accent_rect, border_radius=10)
 
+    def _draw_hazard_zones(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        for zone in self.snapshot.hazard_zones or []:
+            if not zone.get("active", True):
+                continue
+            self._draw_radius_overlay(
+                screen,
+                zone["x"],
+                zone["y"],
+                float(zone["radius"]),
+                playfield_rect,
+                camera_rect,
+                fill_color=HAZARD_FILL_COLOR,
+                outline_color=HAZARD_OUTLINE_COLOR,
+            )
+
+    def _draw_restoration_zones(
+        self,
+        screen: pg.Surface,
+        playfield_rect: pg.Rect,
+        camera_rect: pg.Rect,
+        label_font: pg.font.Font,
+    ) -> None:
+        for zone in self.snapshot.restoration_zones or []:
+            restored = bool(zone.get("restored", False))
+            fill_color = RESTORATION_RESTORED_FILL if restored else RESTORATION_FILL_COLOR
+            outline_color = RESTORATION_RESTORED_OUTLINE if restored else RESTORATION_OUTLINE_COLOR
+            self._draw_radius_overlay(
+                screen,
+                zone["x"],
+                zone["y"],
+                float(zone["radius"]),
+                playfield_rect,
+                camera_rect,
+                fill_color=fill_color,
+                outline_color=outline_color,
+            )
+            screen_x, screen_y = self._screen_point(zone["x"], zone["y"], playfield_rect, camera_rect)
+            label = "Restored" if restored else "Restore"
+            label_surf = label_font.render(label, True, outline_color)
+            screen.blit(label_surf, (screen_x - label_surf.get_width() // 2, screen_y - 10))
+
     def _draw_map_decorations(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
         if self.current_map is None:
             return
@@ -496,6 +566,30 @@ class EasterClientApp:
         if clipped.width <= 0 or clipped.height <= 0:
             return None
         return clipped
+
+    def _draw_radius_overlay(
+        self,
+        screen: pg.Surface,
+        world_x: float,
+        world_y: float,
+        radius: float,
+        playfield_rect: pg.Rect,
+        camera_rect: pg.Rect,
+        *,
+        fill_color: tuple[int, ...],
+        outline_color: tuple[int, ...],
+    ) -> None:
+        screen_x, screen_y = self._screen_point(world_x, world_y, playfield_rect, camera_rect)
+        screen_radius = max(8, int(radius * CAMERA_ZOOM))
+        overlay_rect = pg.Rect(screen_x - screen_radius, screen_y - screen_radius, screen_radius * 2, screen_radius * 2)
+        if overlay_rect.right < playfield_rect.left or overlay_rect.left > playfield_rect.right:
+            return
+        if overlay_rect.bottom < playfield_rect.top or overlay_rect.top > playfield_rect.bottom:
+            return
+        overlay_surface = pg.Surface((screen_radius * 2 + 4, screen_radius * 2 + 4), pg.SRCALPHA)
+        pg.draw.circle(overlay_surface, fill_color, (screen_radius + 2, screen_radius + 2), screen_radius)
+        screen.blit(overlay_surface, (screen_x - screen_radius - 2, screen_y - screen_radius - 2))
+        pg.draw.circle(screen, outline_color, (screen_x, screen_y), screen_radius, width=2)
 
     def _world_point_visible(
         self,

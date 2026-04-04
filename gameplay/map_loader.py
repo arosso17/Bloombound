@@ -9,7 +9,10 @@ from gameplay.map_types import (
     EggSpawnDef,
     EnemySpawnDef,
     FinalBloomDef,
+    HazardZoneDef,
     MapDefinition,
+    PatrolPointDef,
+    RestorationZoneDef,
     ShrineDef,
     SpawnPoint,
 )
@@ -25,7 +28,10 @@ def load_map(map_id: str) -> MapDefinition:
     player_spawns = [SpawnPoint(**spawn) for spawn in payload["player_spawns"]]
     collision_rects = [CollisionRect(**rect) for rect in payload["collision_rects"]]
     decorations = [DecorationDef(**decoration) for decoration in payload.get("decorations", [])]
+    patrol_points = [PatrolPointDef(**point) for point in payload.get("patrol_points", [])]
     egg_spawns = [EggSpawnDef(**spawn) for spawn in payload["egg_spawns"]]
+    restoration_zones = [RestorationZoneDef(**zone) for zone in payload.get("restoration_zones", [])]
+    hazard_zones = [HazardZoneDef(**zone) for zone in payload.get("hazard_zones", [])]
     enemy_spawns = [EnemySpawnDef(**spawn) for spawn in payload["enemy_spawns"]]
     shrine = ShrineDef(**payload["shrine"])
     final_bloom = FinalBloomDef(**payload["final_bloom"])
@@ -38,7 +44,10 @@ def load_map(map_id: str) -> MapDefinition:
         player_spawns=player_spawns,
         collision_rects=collision_rects,
         decorations=decorations,
+        patrol_points=patrol_points,
         egg_spawns=egg_spawns,
+        restoration_zones=restoration_zones,
+        hazard_zones=hazard_zones,
         shrine=shrine,
         enemy_spawns=enemy_spawns,
         final_bloom=final_bloom,
