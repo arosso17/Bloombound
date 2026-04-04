@@ -1,0 +1,16 @@
+{
+  "asset_id": "player",
+  "canvas": { "width": 72, "height": 72 },
+  "shapes": [
+    { "kind": "circle", "x": 36, "y": 36, "radius": 20, "fill": [248, 241, 226], "outline": [61, 66, 71], "outline_width": 3 },
+    { "kind": "circle", "x": 36, "y": 24, "radius": 10, "fill": [255, 224, 187], "outline": [61, 66, 71], "outline_width": 2 },
+    { "kind": "ellipse", "x": 22, "y": 28, "width": 28, "height": 20, "fill": [255, 250, 239], "outline": [61, 66, 71], "outline_width": 2 },
+    { "kind": "line", "x": 29, "y": 23, "x2": 29, "y2": 23, "outline": [61, 66, 71], "outline_width": 3 },
+    { "kind": "line", "x": 43, "y": 23, "x2": 43, "y2": 23, "outline": [61, 66, 71], "outline_width": 3 },
+    { "kind": "line", "x": 24, "y": 51, "x2": 48, "y2": 51, "outline": [61, 66, 71], "outline_width": 3 },
+    { "kind": "line", "x": 18, "y": 40, "x2": 8, "y2": 52, "outline": [61, 66, 71], "outline_width": 4 },
+    { "kind": "line", "x": 54, "y": 40, "x2": 64, "y2": 52, "outline": [61, 66, 71], "outline_width": 4 },
+    { "kind": "line", "x": 28, "y": 56, "x2": 22, "y2": 66, "outline": [61, 66, 71], "outline_width": 4 },
+    { "kind": "line", "x": 44, "y": 56, "x2": 50, "y2": 66, "outline": [61, 66, 71], "outline_width": 4 }
+  ]
+}
