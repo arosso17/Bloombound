@@ -27,11 +27,12 @@ class GameServer:
         port: int = 5050,
         tick_rate: int = 20,
         expected_players: int = 2,
+        map_id: str = "heart_garden",
     ) -> None:
         self.host = host
         self.port = port
         self.tick_rate = tick_rate
-        self.state = GameState(expected_players=expected_players)
+        self.state = GameState(expected_players=expected_players, map_id=map_id)
         self.stop_event = threading.Event()
         self.server_socket: socket.socket | None = None
         self.accept_thread: threading.Thread | None = None
