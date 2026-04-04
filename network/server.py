@@ -88,6 +88,7 @@ class GameServer:
                 continue
 
             client_sock.settimeout(None)
+            client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             player_id = uuid.uuid4().hex[:8]
             default_name = f"Player-{len(self.sessions) + 1}"
             self.state.add_player(player_id, default_name)

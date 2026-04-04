@@ -3,13 +3,15 @@ from __future__ import annotations
 import queue
 import socket
 import threading
+from copy import deepcopy
 from dataclasses import dataclass
 
 import pygame as pg
 
+from gameplay.collision import move_circle
 from gameplay.map_loader import load_map
 from gameplay.map_types import MapDefinition
-from gameplay.state import PLAYER_COLORS
+from gameplay.state import ALIVE_SPEED, PLAYER_COLORS, SPIRIT_SPEED
 from gameplay.visual_assets import load_visual_asset, render_visual_asset
 from network.shared import read_messages_forever, safe_close, send_message
 
@@ -41,6 +43,9 @@ ENEMY_PATROL_RING = (86, 118, 78)
 ENEMY_ALERT_RING = (224, 162, 81)
 ENEMY_CHASE_RING = (198, 83, 83)
 ENEMY_RETURN_RING = (120, 105, 84)
+REMOTE_POSITION_LERP = 0.28
+LOCAL_CORRECTION_LERP = 0.35
+LOCAL_SNAP_DISTANCE = 96.0
 
 
 @dataclass
@@ -71,6 +76,7 @@ class NetworkClient:
 
     def connect(self) -> None:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.sock.connect((self.host, self.port))
         threading.Thread(target=self._reader_loop, daemon=True).start()
         self.send({"type": "join", "name": self.name})
@@ -120,6 +126,10 @@ class EasterClientApp:
         self.host_id = ""
         self.can_start = False
         self.current_map: MapDefinition | None = None
+        self.current_move_x = 0.0
+        self.current_move_y = 0.0
+        self.render_positions: dict[tuple[str, str], tuple[float, float]] = {}
+        self.local_predicted_player: dict | None = None
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
             "egg": load_visual_asset("egg"),
@@ -146,7 +156,7 @@ class EasterClientApp:
 
         running = True
         while running:
-            clock.tick(60)
+            dt = clock.tick(60) / 1000.0
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
@@ -157,6 +167,11 @@ class EasterClientApp:
             if self.snapshot.match_phase == "playing":
                 keys = pg.key.get_pressed()
                 self._send_input(keys)
+                self._advance_local_prediction(dt)
+                self._advance_remote_smoothing()
+            else:
+                self.current_move_x = 0.0
+                self.current_move_y = 0.0
             self._draw(screen, font, small_font)
             pg.display.flip()
 
@@ -177,6 +192,8 @@ class EasterClientApp:
                 self.snapshot.world_height = int(message["world"]["height"])
                 self.connected = True
                 self.connection_closed = False
+                self.render_positions.clear()
+                self.local_predicted_player = None
                 self._send_profile_update()
             elif message_type == "lobby_state":
                 self._load_map(str(message.get("map_id", "heart_garden_slice")))
@@ -185,6 +202,8 @@ class EasterClientApp:
                 self.host_id = str(message.get("host_id", ""))
                 self.can_start = bool(message.get("can_start", False))
                 self.lobby_players = list(message.get("players", []))
+                self.render_positions.clear()
+                self.local_predicted_player = None
                 self._sync_local_profile_from_lobby()
             elif message_type == "world_snapshot":
                 self._load_map(str(message.get("map_id", "heart_garden_slice")))
@@ -198,6 +217,7 @@ class EasterClientApp:
                 self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
                 self.snapshot.objective_text = str(message.get("objective_text", ""))
+                self._reconcile_render_state()
             elif message_type == "disconnected":
                 self.connected = False
                 self.connection_closed = True
@@ -236,6 +256,8 @@ class EasterClientApp:
             return
         move_x = float(keys[pg.K_d]) - float(keys[pg.K_a])
         move_y = float(keys[pg.K_s]) - float(keys[pg.K_w])
+        self.current_move_x = move_x
+        self.current_move_y = move_y
         self.input_seq += 1
         self.network.send(
             {
@@ -247,6 +269,111 @@ class EasterClientApp:
                 "debug_down": bool(keys[pg.K_k]),
             }
         )
+
+    def _reconcile_render_state(self) -> None:
+        active_keys: set[tuple[str, str]] = set()
+
+        for enemy in self.snapshot.enemies or []:
+            key = ("enemy", str(enemy["id"]))
+            self.render_positions.setdefault(key, (float(enemy["x"]), float(enemy["y"])))
+            active_keys.add(key)
+
+        for player in self.snapshot.players or []:
+            player_id = str(player["id"])
+            if player_id == self.player_id:
+                self._reconcile_local_prediction(player)
+                continue
+            key = ("player", player_id)
+            self.render_positions.setdefault(key, (float(player["x"]), float(player["y"])))
+            active_keys.add(key)
+
+        self.render_positions = {
+            key: position
+            for key, position in self.render_positions.items()
+            if key in active_keys
+        }
+
+    def _reconcile_local_prediction(self, player: dict) -> None:
+        server_x = float(player["x"])
+        server_y = float(player["y"])
+        if self.local_predicted_player is None:
+            self.local_predicted_player = deepcopy(player)
+            self.local_predicted_player["x"] = server_x
+            self.local_predicted_player["y"] = server_y
+            return
+
+        predicted_x = float(self.local_predicted_player.get("x", server_x))
+        predicted_y = float(self.local_predicted_player.get("y", server_y))
+        if ((predicted_x - server_x) ** 2 + (predicted_y - server_y) ** 2) ** 0.5 > LOCAL_SNAP_DISTANCE:
+            predicted_x = server_x
+            predicted_y = server_y
+        else:
+            predicted_x += (server_x - predicted_x) * LOCAL_CORRECTION_LERP
+            predicted_y += (server_y - predicted_y) * LOCAL_CORRECTION_LERP
+
+        self.local_predicted_player = deepcopy(player)
+        self.local_predicted_player["x"] = predicted_x
+        self.local_predicted_player["y"] = predicted_y
+
+    def _advance_local_prediction(self, dt: float) -> None:
+        if self.local_predicted_player is None or self.current_map is None:
+            return
+
+        move_x = max(-1.0, min(1.0, self.current_move_x))
+        move_y = max(-1.0, min(1.0, self.current_move_y))
+        magnitude = (move_x * move_x + move_y * move_y) ** 0.5
+        if magnitude > 1.0:
+            move_x /= magnitude
+            move_y /= magnitude
+
+        speed = SPIRIT_SPEED if self.local_predicted_player.get("state") == "spirit" else ALIVE_SPEED
+        speed *= float(self.local_predicted_player.get("hazard_slow_multiplier", 1.0))
+        next_x, next_y = move_circle(
+            x=float(self.local_predicted_player["x"]),
+            y=float(self.local_predicted_player["y"]),
+            radius=float(self.local_predicted_player["radius"]),
+            delta_x=move_x * speed * dt,
+            delta_y=move_y * speed * dt,
+            world_width=self.snapshot.world_width,
+            world_height=self.snapshot.world_height,
+            collision_rects=self.current_map.collision_rects,
+        )
+        self.local_predicted_player["x"] = next_x
+        self.local_predicted_player["y"] = next_y
+
+    def _advance_remote_smoothing(self) -> None:
+        for enemy in self.snapshot.enemies or []:
+            key = ("enemy", str(enemy["id"]))
+            current_x, current_y = self.render_positions.get(key, (float(enemy["x"]), float(enemy["y"])))
+            self.render_positions[key] = (
+                current_x + (float(enemy["x"]) - current_x) * REMOTE_POSITION_LERP,
+                current_y + (float(enemy["y"]) - current_y) * REMOTE_POSITION_LERP,
+            )
+
+        for player in self.snapshot.players or []:
+            player_id = str(player["id"])
+            if player_id == self.player_id:
+                continue
+            key = ("player", player_id)
+            current_x, current_y = self.render_positions.get(key, (float(player["x"]), float(player["y"])))
+            self.render_positions[key] = (
+                current_x + (float(player["x"]) - current_x) * REMOTE_POSITION_LERP,
+                current_y + (float(player["y"]) - current_y) * REMOTE_POSITION_LERP,
+            )
+
+    def _display_player(self, player: dict) -> dict:
+        if str(player["id"]) == self.player_id and self.local_predicted_player is not None:
+            return self.local_predicted_player
+
+        key = ("player", str(player["id"]))
+        smoothed_x, smoothed_y = self.render_positions.get(key, (float(player["x"]), float(player["y"])))
+        payload = dict(player)
+        payload["x"] = smoothed_x
+        payload["y"] = smoothed_y
+        return payload
+
+    def _display_position(self, kind: str, entity_id: str, x: float, y: float) -> tuple[float, float]:
+        return self.render_positions.get((kind, entity_id), (x, y))
 
     def _draw(self, screen: pg.Surface, font: pg.font.Font, small_font: pg.font.Font) -> None:
         if self.snapshot.match_phase == "lobby":
@@ -295,9 +422,10 @@ class EasterClientApp:
             render_visual_asset(screen, self.visual_assets["egg"], (egg_x, egg_y))
 
         for enemy in self.snapshot.enemies or []:
+            display_x, display_y = self._display_position("enemy", str(enemy["id"]), float(enemy["x"]), float(enemy["y"]))
             enemy_x, enemy_y = self._screen_point(
-                enemy["x"],
-                enemy["y"],
+                display_x,
+                display_y,
                 playfield_rect,
                 camera_rect,
             )
@@ -311,15 +439,16 @@ class EasterClientApp:
             render_visual_asset(screen, self.visual_assets["bramble_enemy"], (enemy_x, enemy_y))
 
         for player in self.snapshot.players or []:
-            px, py = self._screen_point(player["x"], player["y"], playfield_rect, camera_rect)
-            color = tuple(player["color"])
-            radius = int(player["radius"] * CAMERA_ZOOM)
+            display_player = self._display_player(player)
+            px, py = self._screen_point(display_player["x"], display_player["y"], playfield_rect, camera_rect)
+            color = tuple(display_player["color"])
+            radius = int(display_player["radius"] * CAMERA_ZOOM)
             ring_radius = radius + 5
-            if player["state"] == "spirit":
+            if display_player["state"] == "spirit":
                 pg.draw.circle(screen, SPIRIT_COLOR, (px, py), radius + 2)
                 pg.draw.circle(screen, color, (px, py), radius, width=2)
             else:
-                player_scale = max(0.45, (player["radius"] * 2.25) / self.visual_assets["player"].width)
+                player_scale = max(0.45, (display_player["radius"] * 2.25) / self.visual_assets["player"].width)
                 render_visual_asset(
                     screen,
                     self.visual_assets["player"],
@@ -328,18 +457,18 @@ class EasterClientApp:
                     color_overrides={"player_head": color},
                 )
                 ring_radius = max(ring_radius, int((self.visual_assets["player"].width * player_scale) / 2) + 2)
-            if player["id"] == self.player_id:
+            if display_player["id"] == self.player_id:
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
             name_surf = small_font.render(
-                f"{player['name']} (R{player['revival_eggs']} S{player.get('restoration_eggs', 0)})",
+                f"{display_player['name']} (R{display_player['revival_eggs']} S{display_player.get('restoration_eggs', 0)})",
                 True,
                 TEXT_COLOR,
             )
             screen.blit(name_surf, (px - name_surf.get_width() // 2, py - radius - 24))
-            if player["state"] == "alive":
+            if display_player["state"] == "alive":
                 bar_width = 42
                 bar_height = 6
-                health_ratio = max(0.0, min(1.0, player["health"] / max(1, player["max_health"])))
+                health_ratio = max(0.0, min(1.0, display_player["health"] / max(1, display_player["max_health"])))
                 bar_rect = pg.Rect(px - bar_width // 2, py + radius + 10, bar_width, bar_height)
                 pg.draw.rect(screen, HEALTH_BG_COLOR, bar_rect, border_radius=4)
                 pg.draw.rect(
@@ -348,7 +477,7 @@ class EasterClientApp:
                     pg.Rect(bar_rect.left, bar_rect.top, int(bar_width * health_ratio), bar_height),
                     border_radius=4,
                 )
-                if float(player.get("hazard_slow_multiplier", 1.0)) < 1.0:
+                if float(display_player.get("hazard_slow_multiplier", 1.0)) < 1.0:
                     pg.draw.circle(screen, HAZARD_OUTLINE_COLOR, (px, py), ring_radius + 6, width=2)
 
         title = font.render("Bloombound Networking Prototype", True, TEXT_COLOR)
@@ -476,7 +605,7 @@ class EasterClientApp:
     def _local_player(self) -> dict | None:
         for player in self.snapshot.players or []:
             if player["id"] == self.player_id:
-                return player
+                return self._display_player(player)
         return None
 
     def _draw_map_geometry(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
