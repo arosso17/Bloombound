@@ -48,6 +48,7 @@ ENEMY_RETURN_RING = (120, 105, 84)
 REMOTE_POSITION_LERP = 0.28
 LOCAL_CORRECTION_LERP = 0.35
 LOCAL_SNAP_DISTANCE = 96.0
+INPUT_SEND_INTERVAL = 1.0 / 20.0
 
 
 @dataclass
@@ -135,6 +136,8 @@ class EasterClientApp:
         self.diagnostics = ClientDiagnostics(enabled=net_debug)
         self.next_ping_at = 0.0
         self.ping_nonce = 0
+        self.next_input_send_at = 0.0
+        self.last_sent_input_state = (0.0, 0.0, False, False)
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
             "egg": load_visual_asset("egg"),
@@ -226,7 +229,14 @@ class EasterClientApp:
                 self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
                 self.snapshot.objective_text = str(message.get("objective_text", ""))
-                self.diagnostics.record_world_snapshot(self.snapshot.tick)
+                transport_seconds = None
+                if "server_sent_at" in message:
+                    try:
+                        server_sent_at = float(message["server_sent_at"])
+                        transport_seconds = max(0.0, time.time() - server_sent_at)
+                    except (TypeError, ValueError):
+                        transport_seconds = None
+                self.diagnostics.record_world_snapshot(self.snapshot.tick, transport_seconds)
                 self._reconcile_render_state()
             elif message_type == "pong":
                 self._handle_pong(message)
@@ -270,6 +280,17 @@ class EasterClientApp:
         move_y = float(keys[pg.K_s]) - float(keys[pg.K_w])
         self.current_move_x = move_x
         self.current_move_y = move_y
+        interact = bool(keys[pg.K_e])
+        debug_down = bool(keys[pg.K_k])
+        current_state = (move_x, move_y, interact, debug_down)
+        now = time.perf_counter()
+        moving = move_x != 0.0 or move_y != 0.0
+        state_changed = current_state != self.last_sent_input_state
+        should_send = state_changed or (
+            now >= self.next_input_send_at and (moving or interact or debug_down)
+        )
+        if not should_send:
+            return
         self.input_seq += 1
         self.diagnostics.record_input_sent()
         self.network.send(
@@ -278,10 +299,12 @@ class EasterClientApp:
                 "seq": self.input_seq,
                 "move_x": move_x,
                 "move_y": move_y,
-                "interact": bool(keys[pg.K_e]),
-                "debug_down": bool(keys[pg.K_k]),
+                "interact": interact,
+                "debug_down": debug_down,
             }
         )
+        self.last_sent_input_state = current_state
+        self.next_input_send_at = now + INPUT_SEND_INTERVAL
 
     def _reconcile_render_state(self) -> None:
         active_keys: set[tuple[str, str]] = set()

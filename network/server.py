@@ -198,6 +198,9 @@ class GameServer:
                     self._send_to_session(session, pong)
 
     def _broadcast(self, message: dict) -> None:
+        if message.get("type") == "world_snapshot":
+            message = dict(message)
+            message["server_sent_at"] = time.time()
         with self.sessions_lock:
             sessions = list(self.sessions.values())
         payload_size = len(encode_message(message))

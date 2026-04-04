@@ -139,6 +139,10 @@ class ClientDiagnostics:
     snapshot_tick_delta_total: int = 0
     snapshot_tick_delta_max: int = 0
     snapshot_tick_delta_samples: int = 0
+    snapshot_transport_total_seconds: float = 0.0
+    snapshot_transport_max_seconds: float = 0.0
+    snapshot_transport_samples: int = 0
+    last_snapshot_transport_seconds: float = 0.0
     rtt_total_seconds: float = 0.0
     rtt_max_seconds: float = 0.0
     rtt_samples: int = 0
@@ -172,7 +176,7 @@ class ClientDiagnostics:
             return
         self.input_messages_sent += 1
 
-    def record_world_snapshot(self, tick: int) -> None:
+    def record_world_snapshot(self, tick: int, transport_seconds: float | None = None) -> None:
         if not self.enabled:
             return
         now = time.perf_counter()
@@ -187,6 +191,11 @@ class ClientDiagnostics:
             self.snapshot_tick_delta_total += tick_delta
             self.snapshot_tick_delta_max = max(self.snapshot_tick_delta_max, tick_delta)
             self.snapshot_tick_delta_samples += 1
+        if transport_seconds is not None and transport_seconds >= 0.0:
+            self.snapshot_transport_total_seconds += transport_seconds
+            self.snapshot_transport_max_seconds = max(self.snapshot_transport_max_seconds, transport_seconds)
+            self.snapshot_transport_samples += 1
+            self.last_snapshot_transport_seconds = transport_seconds
         self.last_snapshot_at = now
         self.last_snapshot_tick = tick
 
@@ -241,6 +250,9 @@ class ClientDiagnostics:
         if self.last_snapshot_at is not None:
             since_snapshot_ms = (now - self.last_snapshot_at) * 1000.0
         avg_tick_delta = _average(float(self.snapshot_tick_delta_total), self.snapshot_tick_delta_samples)
+        avg_transport_ms = _average(self.snapshot_transport_total_seconds, self.snapshot_transport_samples) * 1000.0
+        max_transport_ms = self.snapshot_transport_max_seconds * 1000.0
+        last_transport_ms = self.last_snapshot_transport_seconds * 1000.0
         avg_rtt_ms = _average(self.rtt_total_seconds, self.rtt_samples) * 1000.0
         max_rtt_ms = self.rtt_max_seconds * 1000.0
         avg_server_turn_ms = _average(self.server_turnaround_total_seconds, self.server_turnaround_samples) * 1000.0
@@ -252,7 +264,8 @@ class ClientDiagnostics:
             "[net][client] "
             f"fps={fps:.1f} avg_frame={avg_frame_ms:.2f}ms max_frame={max_frame_ms:.2f}ms "
             f"snapshots={snapshot_rate:.1f}/s gap={avg_snapshot_gap_ms:.2f}/{max_snapshot_gap_ms:.2f}ms "
-            f"snap_age={since_snapshot_ms:.2f}ms tick_delta={avg_tick_delta:.2f} "
+            f"snap_age={since_snapshot_ms:.2f}ms sent_age={avg_transport_ms:.2f}/{max_transport_ms:.2f}/{last_transport_ms:.2f}ms "
+            f"tick_delta={avg_tick_delta:.2f} "
             f"rtt={avg_rtt_ms:.2f}/{max_rtt_ms:.2f}ms server_turn={avg_server_turn_ms:.2f}ms "
             f"local_err={avg_local_error:.2f}/{self.local_error_max:.2f} "
             f"remote_err={avg_remote_player_error:.2f}/{self.remote_player_error_max:.2f} "
@@ -273,6 +286,9 @@ class ClientDiagnostics:
         self.snapshot_tick_delta_total = 0
         self.snapshot_tick_delta_max = 0
         self.snapshot_tick_delta_samples = 0
+        self.snapshot_transport_total_seconds = 0.0
+        self.snapshot_transport_max_seconds = 0.0
+        self.snapshot_transport_samples = 0
         self.rtt_total_seconds = 0.0
         self.rtt_max_seconds = 0.0
         self.rtt_samples = 0
