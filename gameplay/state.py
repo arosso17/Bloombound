@@ -12,6 +12,7 @@ from gameplay.entities import (
     PlayerState,
     RestorationZoneState,
     ShrineState,
+    SpiritPickupState,
 )
 from gameplay.map_loader import load_map
 from gameplay.map_types import CollisionRect, TraversalBarrierDef
@@ -60,6 +61,7 @@ class GameState:
         self.enemy_path_targets: dict[str, tuple[int, int]] = {}
         self.enemy_patrol_routes = self._build_enemy_patrol_routes()
         self.eggs = self._build_eggs_from_map()
+        self.spirit_pickups = self._build_spirit_pickups_from_map()
         self.restoration_zones = self._build_restoration_zones_from_map()
         self.hazard_zones = self._build_hazard_zones_from_map()
         shrine_def = self.map.shrine
@@ -114,6 +116,7 @@ class GameState:
         self.tick = 0
         self.final_bloom.restored = False
         self._reset_eggs()
+        self._reset_spirit_pickups()
         self._reset_restoration_zones()
         self._reset_hazard_zones()
         self._reset_enemies()
@@ -125,6 +128,7 @@ class GameState:
             player.health = player.max_health
             player.revival_eggs = 0
             player.restoration_eggs = 0
+            player.spirit_seeds = 0
             player.hazard_slow_multiplier = DEFAULT_HAZARD_SLOW_MULTIPLIER
             player.last_input_seq = 0
             player.input_state = PlayerInput()
@@ -202,6 +206,7 @@ class GameState:
             "world": {"width": self.map.world_width, "height": self.map.world_height},
             "players": [self._player_snapshot(player) for player in self.players.values()],
             "eggs": [egg.to_dict() for egg in self.eggs],
+            "spirit_pickups": [pickup.to_dict() for pickup in self.spirit_pickups],
             "restoration_zones": [zone.to_dict() for zone in self.restoration_zones],
             "hazard_zones": [zone.to_dict() for zone in self.hazard_zones],
             "shrine": self.shrine.to_dict(),
@@ -243,11 +248,14 @@ class GameState:
 
         if player.state == "alive":
             self._try_collect_eggs(player)
+        else:
+            self._try_collect_spirit_pickups(player)
 
         if self._pressed(player, "interact"):
             if not self._try_revive(player):
-                if not self._try_restore_zone(player):
-                    self._try_restore_final_bloom(player)
+                if not self._try_cleanse_enemy_spawn(player):
+                    if not self._try_restore_zone(player):
+                        self._try_restore_final_bloom(player)
 
     def _update_environment_effects(self, dt: float) -> None:
         for player in self.players.values():
@@ -482,6 +490,21 @@ class GameState:
         self.final_bloom.restored = True
         return True
 
+    def _try_cleanse_enemy_spawn(self, player: PlayerState) -> bool:
+        if player.state != "alive" or player.spirit_seeds <= 0:
+            return False
+
+        for enemy in list(self.enemies):
+            if distance(player.x, player.y, enemy.home_x, enemy.home_y) > 56.0:
+                continue
+            player.spirit_seeds = max(0, player.spirit_seeds - 1)
+            self.enemies = [existing for existing in self.enemies if existing.enemy_id != enemy.enemy_id]
+            self.enemy_paths.pop(enemy.enemy_id, None)
+            self.enemy_path_targets.pop(enemy.enemy_id, None)
+            self.enemy_patrol_routes.pop(enemy.enemy_id, None)
+            return True
+        return False
+
     def _set_player_spirit(self, player: PlayerState) -> None:
         if player.state == "spirit":
             return
@@ -501,6 +524,17 @@ class GameState:
                 radius=spawn.radius,
             )
             for spawn in self.map.egg_spawns
+        ]
+
+    def _build_spirit_pickups_from_map(self) -> list[SpiritPickupState]:
+        return [
+            SpiritPickupState(
+                pickup.pickup_id,
+                pickup.x,
+                pickup.y,
+                radius=pickup.radius,
+            )
+            for pickup in self.map.spirit_pickups
         ]
 
     def _build_restoration_zones_from_map(self) -> list[RestorationZoneState]:
@@ -560,6 +594,9 @@ class GameState:
     def _reset_eggs(self) -> None:
         self.eggs = self._build_eggs_from_map()
 
+    def _reset_spirit_pickups(self) -> None:
+        self.spirit_pickups = self._build_spirit_pickups_from_map()
+
     def _reset_restoration_zones(self) -> None:
         self.restoration_zones = self._build_restoration_zones_from_map()
 
@@ -591,6 +628,17 @@ class GameState:
                     player.restoration_eggs += 1
                 else:
                     player.revival_eggs += 1
+
+    def _try_collect_spirit_pickups(self, player: PlayerState) -> None:
+        if player.state != "spirit":
+            return
+        for pickup in self.spirit_pickups:
+            if pickup.collected:
+                continue
+            if distance(player.x, player.y, pickup.x, pickup.y) <= player.radius + pickup.radius:
+                pickup.collected = True
+                pickup.carrier_player_id = player.player_id
+                player.spirit_seeds += 1
 
     def _drop_carried_eggs(self, player: PlayerState) -> None:
         carried_eggs = [egg for egg in self.eggs if egg.collected and egg.carrier_player_id == player.player_id]
@@ -730,7 +778,11 @@ class GameState:
         if self.match_phase == "lost":
             return "All caretakers became spirits. Press Enter as host to retry."
         if any(player.state == "spirit" for player in self.players.values()):
+            if any(not pickup.collected for pickup in self.spirit_pickups):
+                return "Spirits can gather spirit seeds beyond spirit barriers."
             return "Use a revival egg at the shrine to bring back a teammate."
+        if any(player.spirit_seeds > 0 for player in self.players.values()) and self.enemies:
+            return "Carry a spirit seed to a bramble nest to cleanse that enemy."
         unrestored_count = sum(1 for zone in self.restoration_zones if not zone.restored)
         if unrestored_count > 0:
             return f"Restore the garden circles with restoration eggs. Zones left: {unrestored_count}."

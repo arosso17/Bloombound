@@ -22,6 +22,7 @@ class PlayerState:
     max_health: int = 100
     revival_eggs: int = 0
     restoration_eggs: int = 0
+    spirit_seeds: int = 0
     radius: int = 16
     hazard_slow_multiplier: float = 1.0
     last_input_seq: int = 0
@@ -40,6 +41,7 @@ class PlayerState:
             "max_health": self.max_health,
             "revival_eggs": self.revival_eggs,
             "restoration_eggs": self.restoration_eggs,
+            "spirit_seeds": self.spirit_seeds,
             "radius": self.radius,
         }
 
@@ -61,6 +63,25 @@ class EggState:
             "y": round(self.y, 2),
             "collected": self.collected,
             "egg_type": self.egg_type,
+            "radius": self.radius,
+        }
+
+
+@dataclass
+class SpiritPickupState:
+    pickup_id: str
+    x: float
+    y: float
+    collected: bool = False
+    carrier_player_id: str = ""
+    radius: int = 12
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.pickup_id,
+            "x": round(self.x, 2),
+            "y": round(self.y, 2),
+            "collected": self.collected,
             "radius": self.radius,
         }
 
@@ -108,6 +129,8 @@ class EnemyState:
             "id": self.enemy_id,
             "x": round(self.x, 2),
             "y": round(self.y, 2),
+            "home_x": round(self.home_x, 2),
+            "home_y": round(self.home_y, 2),
             "radius": self.radius,
             "state": self.state,
         }

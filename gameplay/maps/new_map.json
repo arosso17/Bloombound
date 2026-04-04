@@ -1,0 +1,719 @@
+{
+  "map_id": "new_map",
+  "name": "Briarwake Garden",
+  "world": {
+    "width": 2400,
+    "height": 2400
+  },
+  "player_spawns": [
+    {
+      "x": 246.0,
+      "y": 246.0
+    },
+    {
+      "x": 318.0,
+      "y": 246.0
+    },
+    {
+      "x": 246.0,
+      "y": 318.0
+    },
+    {
+      "x": 318.0,
+      "y": 318.0
+    }
+  ],
+  "collision_rects": [
+    {
+      "rect_id": "north_outer",
+      "x": 120.0,
+      "y": 120.0,
+      "width": 2160.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "west_outer",
+      "x": 120.0,
+      "y": 120.0,
+      "width": 40.0,
+      "height": 2160.0
+    },
+    {
+      "rect_id": "east_outer",
+      "x": 2240.0,
+      "y": 120.0,
+      "width": 40.0,
+      "height": 2160.0
+    },
+    {
+      "rect_id": "south_outer",
+      "x": 120.0,
+      "y": 2240.0,
+      "width": 2160.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_east_top",
+      "x": 620.0,
+      "y": 120.0,
+      "width": 40.0,
+      "height": 260.0
+    },
+    {
+      "rect_id": "hub_east_bottom",
+      "x": 620.0,
+      "y": 500.0,
+      "width": 40.0,
+      "height": 360.0
+    },
+    {
+      "rect_id": "hub_south_left",
+      "x": 160.0,
+      "y": 820.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_south_right",
+      "x": 500.0,
+      "y": 820.0,
+      "width": 160.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "shrine_planter",
+      "x": 360.0,
+      "y": 450.0,
+      "width": 110.0,
+      "height": 110.0
+    },
+    {
+      "rect_id": "orchard_north",
+      "x": 780.0,
+      "y": 220.0,
+      "width": 520.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "orchard_west_top",
+      "x": 780.0,
+      "y": 220.0,
+      "width": 40.0,
+      "height": 240.0
+    },
+    {
+      "rect_id": "orchard_west_bottom",
+      "x": 780.0,
+      "y": 580.0,
+      "width": 40.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "orchard_east",
+      "x": 1260.0,
+      "y": 220.0,
+      "width": 40.0,
+      "height": 580.0
+    },
+    {
+      "rect_id": "orchard_south_left",
+      "x": 780.0,
+      "y": 760.0,
+      "width": 180.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "orchard_south_right",
+      "x": 1080.0,
+      "y": 760.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grove_north",
+      "x": 220.0,
+      "y": 1020.0,
+      "width": 500.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grove_west",
+      "x": 220.0,
+      "y": 1020.0,
+      "width": 40.0,
+      "height": 680.0
+    },
+    {
+      "rect_id": "grove_south",
+      "x": 220.0,
+      "y": 1660.0,
+      "width": 500.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grove_east_top",
+      "x": 680.0,
+      "y": 1020.0,
+      "width": 40.0,
+      "height": 140.0
+    },
+    {
+      "rect_id": "grove_east_bottom",
+      "x": 680.0,
+      "y": 1380.0,
+      "width": 40.0,
+      "height": 320.0
+    },
+    {
+      "rect_id": "grove_pillar_a",
+      "x": 420.0,
+      "y": 1180.0,
+      "width": 120.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "grove_pillar_b",
+      "x": 500.0,
+      "y": 1460.0,
+      "width": 120.0,
+      "height": 120.0
+    },
+    {
+      "rect_id": "glass_north",
+      "x": 1480.0,
+      "y": 240.0,
+      "width": 560.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "glass_west_top",
+      "x": 1480.0,
+      "y": 240.0,
+      "width": 40.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "glass_west_bottom",
+      "x": 1480.0,
+      "y": 580.0,
+      "width": 40.0,
+      "height": 380.0
+    },
+    {
+      "rect_id": "glass_east",
+      "x": 2000.0,
+      "y": 240.0,
+      "width": 40.0,
+      "height": 720.0
+    },
+    {
+      "rect_id": "glass_south_left",
+      "x": 1480.0,
+      "y": 920.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "glass_south_right",
+      "x": 1800.0,
+      "y": 920.0,
+      "width": 240.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "glass_bed_a",
+      "x": 1620.0,
+      "y": 400.0,
+      "width": 120.0,
+      "height": 240.0
+    },
+    {
+      "rect_id": "glass_bed_b",
+      "x": 1800.0,
+      "y": 560.0,
+      "width": 120.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "south_north_left",
+      "x": 920.0,
+      "y": 1260.0,
+      "width": 260.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "south_north_right",
+      "x": 1320.0,
+      "y": 1260.0,
+      "width": 320.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "south_west",
+      "x": 920.0,
+      "y": 1260.0,
+      "width": 40.0,
+      "height": 700.0
+    },
+    {
+      "rect_id": "south_east",
+      "x": 1600.0,
+      "y": 1260.0,
+      "width": 40.0,
+      "height": 700.0
+    },
+    {
+      "rect_id": "south_south_left",
+      "x": 920.0,
+      "y": 1920.0,
+      "width": 300.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "south_south_right",
+      "x": 1360.0,
+      "y": 1920.0,
+      "width": 280.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "south_island_top",
+      "x": 1160.0,
+      "y": 1500.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "south_island_left",
+      "x": 1160.0,
+      "y": 1500.0,
+      "width": 40.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "south_island_right",
+      "x": 1340.0,
+      "y": 1500.0,
+      "width": 40.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "south_island_bottom",
+      "x": 1160.0,
+      "y": 1680.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "heart_north_left",
+      "x": 1760.0,
+      "y": 1760.0,
+      "width": 150.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "heart_north_right",
+      "x": 2050.0,
+      "y": 1760.0,
+      "width": 150.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "heart_west",
+      "x": 1760.0,
+      "y": 1760.0,
+      "width": 40.0,
+      "height": 420.0
+    },
+    {
+      "rect_id": "heart_east",
+      "x": 2160.0,
+      "y": 1760.0,
+      "width": 40.0,
+      "height": 420.0
+    },
+    {
+      "rect_id": "heart_south",
+      "x": 1760.0,
+      "y": 2140.0,
+      "width": 440.0,
+      "height": 40.0
+    }
+  ],
+  "traversal_barriers": [
+    {
+      "barrier_id": "spirit_grove_gate",
+      "x": 680.0,
+      "y": 1160.0,
+      "width": 40.0,
+      "height": 220.0,
+      "cleared_by_zone_id": "",
+      "spirit_passable": true
+    },
+    {
+      "barrier_id": "glasshouse_entry_gate",
+      "x": 1480.0,
+      "y": 460.0,
+      "width": 40.0,
+      "height": 120.0,
+      "cleared_by_zone_id": "restore_orchard",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "south_garden_gate",
+      "x": 1180.0,
+      "y": 1260.0,
+      "width": 140.0,
+      "height": 40.0,
+      "cleared_by_zone_id": "restore_glasshouse",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "heart_gate",
+      "x": 1910.0,
+      "y": 1760.0,
+      "width": 140.0,
+      "height": 40.0,
+      "cleared_by_zone_id": "restore_south_garden",
+      "spirit_passable": false
+    }
+  ],
+  "decorations": [
+    {
+      "decoration_id": "flower_hub_1",
+      "asset_id": "dead_flower",
+      "x": 234.0,
+      "y": 426.0,
+      "scale": 0.56
+    },
+    {
+      "decoration_id": "flower_hub_2",
+      "asset_id": "dead_flower",
+      "x": 520.0,
+      "y": 296.0,
+      "scale": 0.52
+    },
+    {
+      "decoration_id": "flower_orchard_1",
+      "asset_id": "dead_flower",
+      "x": 958.0,
+      "y": 566.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "flower_orchard_2",
+      "asset_id": "dead_flower",
+      "x": 1112.0,
+      "y": 642.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_orchard_3",
+      "asset_id": "dead_flower",
+      "x": 890.0,
+      "y": 672.0,
+      "scale": 0.58
+    },
+    {
+      "decoration_id": "flower_glass_1",
+      "asset_id": "dead_flower",
+      "x": 1688.0,
+      "y": 712.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_glass_2",
+      "asset_id": "dead_flower",
+      "x": 1872.0,
+      "y": 772.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "flower_glass_3",
+      "asset_id": "dead_flower",
+      "x": 1768.0,
+      "y": 872.0,
+      "scale": 0.6
+    },
+    {
+      "decoration_id": "flower_south_1",
+      "asset_id": "dead_flower",
+      "x": 1118.0,
+      "y": 1436.0,
+      "scale": 0.76
+    },
+    {
+      "decoration_id": "flower_south_2",
+      "asset_id": "dead_flower",
+      "x": 1468.0,
+      "y": 1518.0,
+      "scale": 0.72
+    },
+    {
+      "decoration_id": "flower_south_3",
+      "asset_id": "dead_flower",
+      "x": 1100.0,
+      "y": 1784.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "flower_south_4",
+      "asset_id": "dead_flower",
+      "x": 1452.0,
+      "y": 1822.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_heart_1",
+      "asset_id": "dead_flower",
+      "x": 1914.0,
+      "y": 1968.0,
+      "scale": 0.62
+    },
+    {
+      "decoration_id": "flower_heart_2",
+      "asset_id": "dead_flower",
+      "x": 2058.0,
+      "y": 1988.0,
+      "scale": 0.62
+    }
+  ],
+  "patrol_points": [
+    {
+      "point_id": "orchard_patrol_a",
+      "enemy_id": "bramble_orchard",
+      "x": 930.0,
+      "y": 372.0
+    },
+    {
+      "point_id": "orchard_patrol_b",
+      "enemy_id": "bramble_orchard",
+      "x": 1138.0,
+      "y": 676.0
+    },
+    {
+      "point_id": "glass_patrol_a",
+      "enemy_id": "bramble_glass",
+      "x": 1610.0,
+      "y": 368.0
+    },
+    {
+      "point_id": "glass_patrol_b",
+      "enemy_id": "bramble_glass",
+      "x": 1898.0,
+      "y": 824.0
+    },
+    {
+      "point_id": "south_patrol_a",
+      "enemy_id": "bramble_marsh",
+      "x": 1056.0,
+      "y": 1380.0
+    },
+    {
+      "point_id": "south_patrol_b",
+      "enemy_id": "bramble_marsh",
+      "x": 1494.0,
+      "y": 1810.0
+    },
+    {
+      "point_id": "heart_patrol_a",
+      "enemy_id": "bramble_heart",
+      "x": 1886.0,
+      "y": 1884.0
+    },
+    {
+      "point_id": "heart_patrol_b",
+      "enemy_id": "bramble_heart",
+      "x": 2070.0,
+      "y": 2068.0
+    }
+  ],
+  "egg_spawns": [
+    {
+      "spawn_id": "hub_restore_1",
+      "x": 758.0,
+      "y": 434.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "hub_revive_1",
+      "x": 360.0,
+      "y": 700.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "orchard_restore_1",
+      "x": 1018.0,
+      "y": 436.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "glass_restore_1",
+      "x": 1900.0,
+      "y": 420.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "glass_revive_1",
+      "x": 1708.0,
+      "y": 850.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "corridor_restore_spare",
+      "x": 884.0,
+      "y": 1038.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "south_revive_1",
+      "x": 1016.0,
+      "y": 1826.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "south_restore_1",
+      "x": 1494.0,
+      "y": 1820.0,
+      "egg_type": "restoration"
+    }
+  ],
+  "spirit_pickups": [
+    {
+      "pickup_id": "spirit_seed_1",
+      "x": 366.0,
+      "y": 1186.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "spirit_seed_2",
+      "x": 594.0,
+      "y": 1332.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "spirit_seed_3",
+      "x": 436.0,
+      "y": 1560.0,
+      "radius": 12
+    }
+  ],
+  "restoration_zones": [
+    {
+      "zone_id": "restore_orchard",
+      "x": 1038.0,
+      "y": 616.0,
+      "radius": 94.0,
+      "interact_radius": 112.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_glasshouse",
+      "x": 1766.0,
+      "y": 748.0,
+      "radius": 96.0,
+      "interact_radius": 114.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_south_garden",
+      "x": 1286.0,
+      "y": 1564.0,
+      "radius": 110.0,
+      "interact_radius": 128.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    }
+  ],
+  "hazard_zones": [
+    {
+      "zone_id": "hazard_orchard",
+      "x": 1038.0,
+      "y": 470.0,
+      "radius": 138.0,
+      "damage_per_second": 18.0,
+      "slow_multiplier": 0.76,
+      "cleared_by_zone_id": "restore_orchard"
+    },
+    {
+      "zone_id": "hazard_glasshouse",
+      "x": 1764.0,
+      "y": 520.0,
+      "radius": 160.0,
+      "damage_per_second": 20.0,
+      "slow_multiplier": 0.72,
+      "cleared_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "zone_id": "hazard_south_garden",
+      "x": 1286.0,
+      "y": 1564.0,
+      "radius": 178.0,
+      "damage_per_second": 22.0,
+      "slow_multiplier": 0.68,
+      "cleared_by_zone_id": "restore_south_garden"
+    }
+  ],
+  "shrine": {
+    "shrine_id": "shrine_hub",
+    "x": 280.0,
+    "y": 280.0,
+    "interact_radius": 54,
+    "revive_radius": 72
+  },
+  "enemy_spawns": [
+    {
+      "enemy_id": "bramble_orchard",
+      "x": 1086.0,
+      "y": 474.0,
+      "radius": 18.0,
+      "speed": 150.0,
+      "damage_per_second": 40.0,
+      "leash_radius": 300.0,
+      "aggro_radius": 220.0,
+      "alert_duration_ticks": 80
+    },
+    {
+      "enemy_id": "bramble_glass",
+      "x": 1768.0,
+      "y": 520.0,
+      "radius": 18.0,
+      "speed": 152.0,
+      "damage_per_second": 42.0,
+      "leash_radius": 320.0,
+      "aggro_radius": 230.0,
+      "alert_duration_ticks": 84
+    },
+    {
+      "enemy_id": "bramble_marsh",
+      "x": 1280.0,
+      "y": 1466.0,
+      "radius": 18.0,
+      "speed": 148.0,
+      "damage_per_second": 42.0,
+      "leash_radius": 360.0,
+      "aggro_radius": 240.0,
+      "alert_duration_ticks": 88
+    },
+    {
+      "enemy_id": "bramble_heart",
+      "x": 1888.0,
+      "y": 1884.0,
+      "radius": 18.0,
+      "speed": 156.0,
+      "damage_per_second": 44.0,
+      "leash_radius": 260.0,
+      "aggro_radius": 220.0,
+      "alert_duration_ticks": 84
+    }
+  ],
+  "final_bloom": {
+    "bloom_id": "heart_bloom",
+    "x": 1982.0,
+    "y": 1978.0,
+    "radius": 26,
+    "interact_radius": 74
+  }
+}

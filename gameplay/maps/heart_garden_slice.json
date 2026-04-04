@@ -131,7 +131,7 @@
       "width": 100.0,
       "height": 34.0,
       "cleared_by_zone_id": "restore_pond",
-      "spirit_passable": false
+      "spirit_passable": true
     }
   ],
   "decorations": [
@@ -205,6 +205,14 @@
       "x": 1108.0,
       "y": 668.0,
       "egg_type": "restoration"
+    }
+  ],
+  "spirit_pickups": [
+    {
+      "pickup_id": "spirit_pickup_1",
+      "x": 934.0,
+      "y": 688.0,
+      "radius": 12
     }
   ],
   "restoration_zones": [

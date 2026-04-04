@@ -15,6 +15,7 @@ from gameplay.map_types import (
     RestorationZoneDef,
     ShrineDef,
     SpawnPoint,
+    SpiritPickupDef,
     TraversalBarrierDef,
 )
 
@@ -32,6 +33,7 @@ def load_map(map_id: str) -> MapDefinition:
     decorations = [DecorationDef(**decoration) for decoration in payload.get("decorations", [])]
     patrol_points = [PatrolPointDef(**point) for point in payload.get("patrol_points", [])]
     egg_spawns = [EggSpawnDef(**spawn) for spawn in payload["egg_spawns"]]
+    spirit_pickups = [SpiritPickupDef(**pickup) for pickup in payload.get("spirit_pickups", [])]
     restoration_zones = [RestorationZoneDef(**zone) for zone in payload.get("restoration_zones", [])]
     hazard_zones = [HazardZoneDef(**zone) for zone in payload.get("hazard_zones", [])]
     enemy_spawns = [EnemySpawnDef(**spawn) for spawn in payload["enemy_spawns"]]
@@ -49,6 +51,7 @@ def load_map(map_id: str) -> MapDefinition:
         decorations=decorations,
         patrol_points=patrol_points,
         egg_spawns=egg_spawns,
+        spirit_pickups=spirit_pickups,
         restoration_zones=restoration_zones,
         hazard_zones=hazard_zones,
         shrine=shrine,

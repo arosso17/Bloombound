@@ -28,6 +28,14 @@ class EggSpawnDef:
 
 
 @dataclass(frozen=True)
+class SpiritPickupDef:
+    pickup_id: str
+    x: float
+    y: float
+    radius: int = 12
+
+
+@dataclass(frozen=True)
 class PatrolPointDef:
     point_id: str
     enemy_id: str
@@ -120,6 +128,7 @@ class MapDefinition:
     decorations: list[DecorationDef]
     patrol_points: list[PatrolPointDef]
     egg_spawns: list[EggSpawnDef]
+    spirit_pickups: list[SpiritPickupDef]
     restoration_zones: list[RestorationZoneDef]
     hazard_zones: list[HazardZoneDef]
     shrine: ShrineDef

@@ -41,6 +41,12 @@ RESTORATION_FILL_COLOR = (122, 174, 122, 28)
 RESTORATION_OUTLINE_COLOR = (81, 132, 84, 120)
 RESTORATION_RESTORED_FILL = (160, 216, 156, 44)
 RESTORATION_RESTORED_OUTLINE = (58, 117, 65, 138)
+SPIRIT_PICKUP_FILL = (187, 221, 255)
+SPIRIT_PICKUP_OUTLINE = (88, 127, 173)
+NEST_CORRUPT_FILL = (118, 72, 72)
+NEST_CORRUPT_OUTLINE = (78, 41, 41)
+NEST_CLEANSED_FILL = (128, 178, 118)
+NEST_CLEANSED_OUTLINE = (69, 115, 64)
 ENEMY_PATROL_RING = (86, 118, 78)
 ENEMY_ALERT_RING = (224, 162, 81)
 ENEMY_CHASE_RING = (198, 83, 83)
@@ -59,6 +65,7 @@ class ClientSnapshot:
     match_phase: str = "lobby"
     players: list[dict] | None = None
     eggs: list[dict] | None = None
+    spirit_pickups: list[dict] | None = None
     restoration_zones: list[dict] | None = None
     hazard_zones: list[dict] | None = None
     shrine: dict | None = None
@@ -153,7 +160,15 @@ class EasterClientApp:
         self.name_input = name[:24]
         self.selected_color_index = 0
         self.profile_initialized = False
-        self.snapshot = ClientSnapshot(players=[], eggs=[], restoration_zones=[], hazard_zones=[], shrine=None, enemies=[])
+        self.snapshot = ClientSnapshot(
+            players=[],
+            eggs=[],
+            spirit_pickups=[],
+            restoration_zones=[],
+            hazard_zones=[],
+            shrine=None,
+            enemies=[],
+        )
         self.connected = False
         self.connection_closed = False
         self.input_seq = 0
@@ -179,9 +194,11 @@ class EasterClientApp:
             "egg_revival": load_visual_asset("egg_revival"),
             "egg_restoration": load_visual_asset("egg_restoration"),
             "bramble_enemy": load_visual_asset("bramble_enemy"),
+            "bramble_nest": load_visual_asset("bramble_nest"),
             "heart_bloom_dormant": load_visual_asset("heart_bloom_dormant"),
             "heart_bloom_restored": load_visual_asset("heart_bloom_restored"),
             "player": load_visual_asset("player"),
+            "spirit_seed": load_visual_asset("spirit_seed"),
         }
 
     def run(self) -> None:
@@ -267,6 +284,7 @@ class EasterClientApp:
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.eggs = list(message.get("eggs", []))
+                self.snapshot.spirit_pickups = list(message.get("spirit_pickups", []))
                 self.snapshot.restoration_zones = list(message.get("restoration_zones", []))
                 self.snapshot.hazard_zones = list(message.get("hazard_zones", []))
                 self.snapshot.shrine = message.get("shrine")
@@ -489,6 +507,7 @@ class EasterClientApp:
         self._draw_restoration_zones(screen, playfield_rect, camera_rect, small_font)
         self._draw_map_geometry(screen, playfield_rect, camera_rect)
         self._draw_map_decorations(screen, playfield_rect, camera_rect)
+        self._draw_enemy_spawners(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
             shrine_x, shrine_y = self._screen_point(
@@ -521,6 +540,17 @@ class EasterClientApp:
             egg_type = str(egg.get("egg_type", "revival"))
             egg_asset = "egg_restoration" if egg_type == "restoration" else "egg_revival"
             render_visual_asset(screen, self.visual_assets[egg_asset], (egg_x, egg_y))
+
+        for pickup in self.snapshot.spirit_pickups or []:
+            if pickup.get("collected", False):
+                continue
+            pickup_x, pickup_y = self._screen_point(
+                pickup["x"],
+                pickup["y"],
+                playfield_rect,
+                camera_rect,
+            )
+            render_visual_asset(screen, self.visual_assets["spirit_seed"], (pickup_x, pickup_y))
 
         for enemy in self.snapshot.enemies or []:
             display_x, display_y = self._display_position("enemy", str(enemy["id"]), float(enemy["x"]), float(enemy["y"]))
@@ -561,7 +591,12 @@ class EasterClientApp:
             if display_player["id"] == self.player_id:
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
             name_surf = small_font.render(
-                f"{display_player['name']} (R{display_player['revival_eggs']} S{display_player.get('restoration_eggs', 0)})",
+                (
+                    f"{display_player['name']} "
+                    f"(R{display_player['revival_eggs']} "
+                    f"T{display_player.get('restoration_eggs', 0)} "
+                    f"P{display_player.get('spirit_seeds', 0)})"
+                ),
                 True,
                 TEXT_COLOR,
             )
@@ -793,6 +828,35 @@ class EasterClientApp:
                 continue
             dx, dy = self._screen_point(decoration.x, decoration.y, playfield_rect, camera_rect)
             render_visual_asset(screen, asset, (dx, dy), scale=max(0.1, decoration.scale))
+
+    def _draw_enemy_spawners(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        if self.current_map is None:
+            return
+        active_enemy_ids = {str(enemy.get("id", "")) for enemy in self.snapshot.enemies or []}
+        for spawn in self.current_map.enemy_spawns:
+            if not self._world_point_visible(spawn.x, spawn.y, playfield_rect, camera_rect, margin=80):
+                continue
+            sx, sy = self._screen_point(spawn.x, spawn.y, playfield_rect, camera_rect)
+            is_active = spawn.enemy_id in active_enemy_ids
+            outline_color = NEST_CORRUPT_OUTLINE if is_active else NEST_CLEANSED_OUTLINE
+            color_overrides = (
+                {
+                    "nest_core": (128, 82, 85),
+                    "nest_glow": (178, 109, 116),
+                }
+                if is_active
+                else {
+                    "nest_core": (114, 168, 104),
+                    "nest_glow": (193, 224, 173),
+                }
+            )
+            render_visual_asset(
+                screen,
+                self.visual_assets["bramble_nest"],
+                (sx, sy),
+                color_overrides=color_overrides,
+            )
+            pg.draw.circle(screen, outline_color, (sx, sy), 28, width=2)
 
     def _decoration_asset_id(self, asset_id: str, world_x: float, world_y: float) -> str:
         restored_zone = self._restored_zone_near(world_x, world_y)

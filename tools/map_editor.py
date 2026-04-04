@@ -21,6 +21,7 @@ DEFAULT_MAP = {
     "decorations": [],
     "patrol_points": [],
     "egg_spawns": [],
+    "spirit_pickups": [],
     "restoration_zones": [],
     "hazard_zones": [],
     "shrine": {"shrine_id": "shrine_1", "x": 240.0, "y": 220.0, "interact_radius": 54, "revive_radius": 72},
@@ -54,6 +55,7 @@ class MapEditor:
             "decorations": tk.BooleanVar(value=True),
             "player_spawns": tk.BooleanVar(value=True),
             "egg_spawns": tk.BooleanVar(value=True),
+            "spirit_pickups": tk.BooleanVar(value=True),
             "restoration_zones": tk.BooleanVar(value=True),
             "hazard_zones": tk.BooleanVar(value=True),
             "enemy_spawns": tk.BooleanVar(value=True),
@@ -249,6 +251,7 @@ class MapEditor:
             ("patrol_point", "Add Patrol Point"),
             ("player_spawn", "Add Player Spawn"),
             ("egg_spawn", "Add Egg Spawn"),
+            ("spirit_pickup", "Add Spirit Pickup"),
             ("restoration_zone", "Add Restoration"),
             ("hazard_zone", "Add Hazard"),
             ("enemy_spawn", "Add Enemy Spawn"),
@@ -269,6 +272,7 @@ class MapEditor:
             ("decorations", "Decorations"),
             ("player_spawns", "Player Spawns"),
             ("egg_spawns", "Eggs"),
+            ("spirit_pickups", "Spirit Pickups"),
             ("restoration_zones", "Restores"),
             ("hazard_zones", "Hazards"),
             ("enemy_spawns", "Enemies"),
@@ -469,6 +473,9 @@ class MapEditor:
                 obj["spawn_id"] = self.property_vars["id"].get().strip() or obj["spawn_id"]
                 obj["egg_type"] = self.property_vars["egg_type"].get().strip() or obj.get("egg_type", "revival")
                 obj["radius"] = max(1.0, self._parse_float_var("radius"))
+            elif section == "spirit_pickups":
+                obj["pickup_id"] = self.property_vars["id"].get().strip() or obj["pickup_id"]
+                obj["radius"] = max(1.0, self._parse_float_var("radius"))
             elif section == "restoration_zones":
                 obj["zone_id"] = self.property_vars["id"].get().strip() or obj["zone_id"]
                 obj["radius"] = max(8.0, self._parse_float_var("radius"))
@@ -664,6 +671,8 @@ class MapEditor:
             labels.append((("player_spawns", index), f"Player Spawn {index + 1}"))
         for index, spawn in enumerate(self.map_data["egg_spawns"]):
             labels.append((("egg_spawns", index), f"Egg: {spawn['spawn_id']}"))
+        for index, pickup in enumerate(self.map_data["spirit_pickups"]):
+            labels.append((("spirit_pickups", index), f"Spirit Pickup: {pickup['pickup_id']}"))
         for index, zone in enumerate(self.map_data["restoration_zones"]):
             labels.append((("restoration_zones", index), f"Restore: {zone['zone_id']}"))
         for index, zone in enumerate(self.map_data["hazard_zones"]):
@@ -735,6 +744,8 @@ class MapEditor:
             self._set_property("id", obj.get("point_id", ""))
         elif section == "egg_spawns":
             self._set_property("id", obj.get("spawn_id", ""))
+        elif section == "spirit_pickups":
+            self._set_property("id", obj.get("pickup_id", ""))
         elif section in {"restoration_zones", "hazard_zones"}:
             self._set_property("id", obj.get("zone_id", ""))
         elif section == "enemy_spawns":
@@ -818,6 +829,9 @@ class MapEditor:
             for index, spawn in enumerate(self.map_data["egg_spawns"]):
                 egg_fill = "#88cfa9" if spawn.get("egg_type") == "restoration" else "#f28bb1"
                 self._draw_point_marker(spawn["x"], spawn["y"], egg_fill, "E")
+        if self._layer_visible("spirit_pickups"):
+            for index, pickup in enumerate(self.map_data["spirit_pickups"]):
+                self._draw_point_marker(pickup["x"], pickup["y"], "#b9d9ff", "SP")
         if self._layer_visible("shrine"):
             self._draw_radius_marker(self.map_data["shrine"], "#ffd56c", "S")
         if self._layer_visible("enemy_spawns"):
@@ -921,7 +935,7 @@ class MapEditor:
 
         bbox = self._point_bbox(obj["x"], obj["y"], max(float(obj.get("radius", 10)), 12))
         self.canvas.create_rectangle(*bbox, outline="#246bff", width=2, dash=(6, 4))
-        if section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "restoration_zones", "hazard_zones"}:
+        if section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "spirit_pickups", "restoration_zones", "hazard_zones"}:
             for handle_name, hx, hy in self._radius_handles(obj):
                 self._draw_handle(handle_name, hx, hy)
 
@@ -961,6 +975,8 @@ class MapEditor:
             objects.extend((("patrol_points", index), point) for index, point in enumerate(self.map_data["patrol_points"]))
         if self._layer_visible("egg_spawns"):
             objects.extend((("egg_spawns", index), spawn) for index, spawn in enumerate(self.map_data["egg_spawns"]))
+        if self._layer_visible("spirit_pickups"):
+            objects.extend((("spirit_pickups", index), pickup) for index, pickup in enumerate(self.map_data["spirit_pickups"]))
         if self._layer_visible("shrine"):
             objects.append((("shrine", None), self.map_data["shrine"]))
         if self._layer_visible("enemy_spawns"):
@@ -976,7 +992,7 @@ class MapEditor:
         section, _, obj = target
         if section in {"collision_rects", "traversal_barriers"}:
             handles = self._rect_handles(obj)
-        elif section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "restoration_zones", "hazard_zones"}:
+        elif section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "spirit_pickups", "restoration_zones", "hazard_zones"}:
             handles = self._radius_handles(obj)
         else:
             return None
@@ -1027,6 +1043,8 @@ class MapEditor:
 
         radius = ((world_x - float(start_obj["x"])) ** 2 + (world_y - float(start_obj["y"])) ** 2) ** 0.5
         if section == "egg_spawns":
+            obj["radius"] = round(max(4.0, radius), 2)
+        elif section == "spirit_pickups":
             obj["radius"] = round(max(4.0, radius), 2)
         elif section == "enemy_spawns":
             obj["radius"] = round(max(4.0, radius), 2)
@@ -1122,6 +1140,18 @@ class MapEditor:
                 }
             )
             self._select_object_ref(("egg_spawns", len(self.map_data["egg_spawns"]) - 1))
+            return
+        if tool == "spirit_pickup":
+            self._ensure_layer_visible("spirit_pickups")
+            self.map_data["spirit_pickups"].append(
+                {
+                    "pickup_id": self._next_id("spirit_pickups", "pickup_id", "spirit_pickup"),
+                    "x": world_x,
+                    "y": world_y,
+                    "radius": 12,
+                }
+            )
+            self._select_object_ref(("spirit_pickups", len(self.map_data["spirit_pickups"]) - 1))
             return
         if tool == "restoration_zone":
             self._ensure_layer_visible("restoration_zones")
@@ -1243,6 +1273,7 @@ class MapEditor:
         self.map_data.setdefault("traversal_barriers", [])
         self.map_data.setdefault("decorations", [])
         self.map_data.setdefault("patrol_points", [])
+        self.map_data.setdefault("spirit_pickups", [])
         self.map_data.setdefault("restoration_zones", [])
         self.map_data.setdefault("hazard_zones", [])
         self.selected_ref = None

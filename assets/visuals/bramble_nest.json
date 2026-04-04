@@ -1,0 +1,74 @@
+{
+  "asset_id": "bramble_nest",
+  "canvas": {
+    "width": 84,
+    "height": 84
+  },
+  "shapes": [
+    {
+      "kind": "line",
+      "x": 16,
+      "y": 58,
+      "x2": 66,
+      "y2": 26,
+      "outline": [72, 47, 35],
+      "outline_width": 5
+    },
+    {
+      "kind": "line",
+      "x": 18,
+      "y": 28,
+      "x2": 64,
+      "y2": 60,
+      "outline": [72, 47, 35],
+      "outline_width": 5
+    },
+    {
+      "kind": "line",
+      "x": 24,
+      "y": 68,
+      "x2": 58,
+      "y2": 12,
+      "outline": [94, 62, 46],
+      "outline_width": 4
+    },
+    {
+      "kind": "ellipse",
+      "x": 14,
+      "y": 30,
+      "width": 56,
+      "height": 26,
+      "fill": [111, 77, 56],
+      "outline": [72, 47, 35],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 20,
+      "y": 36,
+      "width": 44,
+      "height": 16,
+      "fill": [140, 100, 72],
+      "outline": [82, 56, 40],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 42,
+      "y": 44,
+      "radius": 13,
+      "fill": [128, 82, 85],
+      "color_key": "nest_core",
+      "outline": [72, 47, 35],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 42,
+      "y": 44,
+      "radius": 6,
+      "fill": [178, 109, 116],
+      "color_key": "nest_glow"
+    }
+  ]
+}
