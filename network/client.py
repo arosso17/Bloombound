@@ -23,6 +23,8 @@ WINDOW_HEIGHT = 700
 CAMERA_ZOOM = 1.0
 BACKGROUND_COLOR = (232, 228, 214)
 PLAYFIELD_COLOR = (205, 214, 188)
+HUD_PANEL_COLOR = (243, 238, 226)
+HUD_PANEL_ACCENT = (224, 216, 201)
 SHRINE_COLOR = (255, 216, 138)
 TEXT_COLOR = (48, 58, 64)
 SPIRIT_COLOR = (188, 234, 255)
@@ -31,8 +33,10 @@ HEALTH_BG_COLOR = (233, 222, 212)
 HEALTH_FILL_COLOR = (120, 191, 104)
 LOSS_COLOR = (125, 76, 76)
 WIN_COLOR = (89, 143, 84)
-HEDGE_COLOR = (111, 139, 96)
-HEDGE_ACCENT_COLOR = (140, 171, 122)
+DEAD_HEDGE_COLOR = (122, 106, 86)
+DEAD_HEDGE_ACCENT_COLOR = (150, 131, 108)
+RESTORED_HEDGE_COLOR = (111, 139, 96)
+RESTORED_HEDGE_ACCENT_COLOR = (140, 171, 122)
 REVIVAL_EGG_COLOR = (244, 173, 208)
 RESTORATION_EGG_COLOR = (143, 214, 181)
 HAZARD_FILL_COLOR = (164, 88, 88, 40)
@@ -189,6 +193,7 @@ class EasterClientApp:
         self.udp_ready = False
         self.udp_nonce = 0
         self.next_udp_hello_at = 0.0
+        self.show_full_hud = False
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
             "egg_revival": load_visual_asset("egg_revival"),
@@ -225,7 +230,6 @@ class EasterClientApp:
                     running = False
                 elif event.type == pg.KEYDOWN:
                     self._handle_keydown(event)
-
             self._handle_network_messages()
             if self.snapshot.match_phase == "playing":
                 keys = pg.key.get_pressed()
@@ -312,6 +316,9 @@ class EasterClientApp:
 
     def _handle_keydown(self, event: pg.event.Event) -> None:
         if not self.connected:
+            return
+        if event.key == pg.K_TAB and self.snapshot.match_phase != "lobby":
+            self.show_full_hud = not self.show_full_hud
             return
         if self.snapshot.match_phase in {"won", "lost"}:
             if event.key == pg.K_RETURN and self.is_host and self.can_start:
@@ -503,6 +510,7 @@ class EasterClientApp:
         playfield_rect = pg.Rect(32, 96, WINDOW_WIDTH - 64, WINDOW_HEIGHT - 132)
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
+        screen.set_clip(playfield_rect)
         self._draw_hazard_zones(screen, playfield_rect, camera_rect)
         self._draw_restoration_zones(screen, playfield_rect, camera_rect, small_font)
         self._draw_map_geometry(screen, playfield_rect, camera_rect)
@@ -516,7 +524,8 @@ class EasterClientApp:
                 playfield_rect,
                 camera_rect,
             )
-            render_visual_asset(screen, self.visual_assets["shrine"], (shrine_x, shrine_y))
+            if self._world_point_visible(self.snapshot.shrine["x"], self.snapshot.shrine["y"], playfield_rect, camera_rect, margin=64):
+                render_visual_asset(screen, self.visual_assets["shrine"], (shrine_x, shrine_y))
 
         if self.snapshot.final_bloom:
             bloom_x, bloom_y = self._screen_point(
@@ -526,10 +535,13 @@ class EasterClientApp:
                 camera_rect,
             )
             bloom_asset = "heart_bloom_restored" if self.snapshot.final_bloom.get("restored") else "heart_bloom_dormant"
-            render_visual_asset(screen, self.visual_assets[bloom_asset], (bloom_x, bloom_y))
+            if self._world_point_visible(self.snapshot.final_bloom["x"], self.snapshot.final_bloom["y"], playfield_rect, camera_rect, margin=64):
+                render_visual_asset(screen, self.visual_assets[bloom_asset], (bloom_x, bloom_y))
 
         for egg in self.snapshot.eggs or []:
             if egg.get("collected", False):
+                continue
+            if not self._world_point_visible(egg["x"], egg["y"], playfield_rect, camera_rect, margin=48):
                 continue
             egg_x, egg_y = self._screen_point(
                 egg["x"],
@@ -544,6 +556,8 @@ class EasterClientApp:
         for pickup in self.snapshot.spirit_pickups or []:
             if pickup.get("collected", False):
                 continue
+            if not self._world_point_visible(pickup["x"], pickup["y"], playfield_rect, camera_rect, margin=48):
+                continue
             pickup_x, pickup_y = self._screen_point(
                 pickup["x"],
                 pickup["y"],
@@ -554,6 +568,8 @@ class EasterClientApp:
 
         for enemy in self.snapshot.enemies or []:
             display_x, display_y = self._display_position("enemy", str(enemy["id"]), float(enemy["x"]), float(enemy["y"]))
+            if not self._world_point_visible(display_x, display_y, playfield_rect, camera_rect, margin=60):
+                continue
             enemy_x, enemy_y = self._screen_point(
                 display_x,
                 display_y,
@@ -571,6 +587,8 @@ class EasterClientApp:
 
         for player in self.snapshot.players or []:
             display_player = self._display_player(player)
+            if not self._world_point_visible(display_player["x"], display_player["y"], playfield_rect, camera_rect, margin=72):
+                continue
             px, py = self._screen_point(display_player["x"], display_player["y"], playfield_rect, camera_rect)
             color = tuple(display_player["color"])
             radius = int(display_player["radius"] * CAMERA_ZOOM)
@@ -590,16 +608,7 @@ class EasterClientApp:
                 ring_radius = max(ring_radius, int((self.visual_assets["player"].width * player_scale) / 2) + 2)
             if display_player["id"] == self.player_id:
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
-            name_surf = small_font.render(
-                (
-                    f"{display_player['name']} "
-                    f"(R{display_player['revival_eggs']} "
-                    f"T{display_player.get('restoration_eggs', 0)} "
-                    f"P{display_player.get('spirit_seeds', 0)})"
-                ),
-                True,
-                TEXT_COLOR,
-            )
+            name_surf = small_font.render(display_player["name"], True, TEXT_COLOR)
             screen.blit(name_surf, (px - name_surf.get_width() // 2, py - radius - 24))
             if display_player["state"] == "alive":
                 bar_width = 42
@@ -615,6 +624,7 @@ class EasterClientApp:
                 )
                 if float(display_player.get("hazard_slow_multiplier", 1.0)) < 1.0:
                     pg.draw.circle(screen, HAZARD_OUTLINE_COLOR, (px, py), ring_radius + 6, width=2)
+        screen.set_clip(None)
 
         title = font.render("Bloombound Networking Prototype", True, TEXT_COLOR)
         if self.connected:
@@ -622,10 +632,13 @@ class EasterClientApp:
         else:
             status_text = f"Connecting to {self.network.host}:{self.network.port}..."
         status = small_font.render(status_text, True, TEXT_COLOR)
-        tick_text = small_font.render(f"Snapshot tick: {self.snapshot.tick}", True, TEXT_COLOR)
+        tick_text = small_font.render(f"Tick {self.snapshot.tick}", True, TEXT_COLOR)
         screen.blit(title, (32, 28))
         screen.blit(status, (32, 58))
-        screen.blit(tick_text, (WINDOW_WIDTH - 180, 28))
+        screen.blit(tick_text, (WINDOW_WIDTH - 110, 28))
+        self._draw_compact_hud(screen, font, small_font)
+        if self.show_full_hud:
+            self._draw_details_overlay(screen, font, small_font, playfield_rect)
         if self.snapshot.match_phase in {"won", "lost"}:
             self._draw_match_overlay(screen, font, small_font, playfield_rect)
 
@@ -752,10 +765,13 @@ class EasterClientApp:
             screen_rect = self._screen_rect(rect.x, rect.y, rect.width, rect.height, playfield_rect, camera_rect)
             if screen_rect is None:
                 continue
-            pg.draw.rect(screen, HEDGE_COLOR, screen_rect, border_radius=12)
+            restored = self._zone_is_restored(rect.restored_by_zone_id)
+            fill_color = RESTORED_HEDGE_COLOR if restored else DEAD_HEDGE_COLOR
+            accent_color = RESTORED_HEDGE_ACCENT_COLOR if restored else DEAD_HEDGE_ACCENT_COLOR
+            pg.draw.rect(screen, fill_color, screen_rect, border_radius=12)
             accent_rect = screen_rect.inflate(-8, -8)
             if accent_rect.width > 0 and accent_rect.height > 0:
-                pg.draw.rect(screen, HEDGE_ACCENT_COLOR, accent_rect, border_radius=10)
+                pg.draw.rect(screen, accent_color, accent_rect, border_radius=10)
 
         for barrier in self._active_barriers():
             screen_rect = self._screen_rect(barrier.x, barrier.y, barrier.width, barrier.height, playfield_rect, camera_rect)
@@ -878,23 +894,202 @@ class EasterClientApp:
             return asset_id
 
     def _restored_zone_for_decoration(self, decoration: DecorationDef) -> dict | None:
-        if decoration.restored_by_zone_id:
-            for zone in self.snapshot.restoration_zones or []:
-                if str(zone.get("id", "")) != decoration.restored_by_zone_id:
-                    continue
-                if bool(zone.get("restored", False)):
-                    return zone
+        if not decoration.restored_by_zone_id:
             return None
-        return self._restored_zone_near(decoration.x, decoration.y)
-
-    def _restored_zone_near(self, world_x: float, world_y: float) -> dict | None:
         for zone in self.snapshot.restoration_zones or []:
-            if not zone.get("restored", False):
+            if str(zone.get("id", "")) != decoration.restored_by_zone_id:
                 continue
-            radius = float(zone.get("radius", 0.0))
-            if ((float(zone["x"]) - world_x) ** 2 + (float(zone["y"]) - world_y) ** 2) ** 0.5 <= radius:
+            if bool(zone.get("restored", False)):
                 return zone
         return None
+
+    def _zone_is_restored(self, zone_id: str) -> bool:
+        if not zone_id:
+            return False
+        for zone in self.snapshot.restoration_zones or []:
+            if str(zone.get("id", "")) != zone_id:
+                continue
+            return bool(zone.get("restored", False))
+        return False
+
+    def _draw_compact_hud(
+        self,
+        screen: pg.Surface,
+        font: pg.font.Font,
+        small_font: pg.font.Font,
+    ) -> None:
+        local_player = self._local_player()
+        revival_eggs = int(local_player.get("revival_eggs", 0)) if local_player is not None else 0
+        restoration_eggs = int(local_player.get("restoration_eggs", 0)) if local_player is not None else 0
+        spirit_seeds = int(local_player.get("spirit_seeds", 0)) if local_player is not None else 0
+
+        hud_rect = pg.Rect(WINDOW_WIDTH - 194, 16, 162, 58)
+        pg.draw.rect(screen, HUD_PANEL_COLOR, hud_rect, border_radius=16)
+        pg.draw.rect(screen, HUD_PANEL_ACCENT, hud_rect, width=2, border_radius=16)
+        render_visual_asset(
+            screen,
+            self.visual_assets["heart_bloom_dormant"],
+            (hud_rect.left + 26, hud_rect.centery),
+            scale=0.34,
+        )
+        title = small_font.render("Bloombound", True, TEXT_COLOR)
+        values = small_font.render(f"R {revival_eggs}   T {restoration_eggs}   P {spirit_seeds}", True, TEXT_COLOR)
+        screen.blit(title, (hud_rect.left + 48, hud_rect.top + 12))
+        screen.blit(values, (hud_rect.left + 48, hud_rect.top + 32))
+
+    def _draw_details_overlay(
+        self,
+        screen: pg.Surface,
+        font: pg.font.Font,
+        small_font: pg.font.Font,
+        playfield_rect: pg.Rect,
+    ) -> None:
+        local_player = self._local_player()
+        players = self.snapshot.players or []
+        restoration_zones = self.snapshot.restoration_zones or []
+        restored_count = sum(1 for zone in restoration_zones if zone.get("restored", False))
+        local_name = local_player["name"] if local_player is not None else "Caretaker"
+        local_state = str(local_player.get("state", "alive")).title() if local_player is not None else "Unknown"
+        health = int(local_player.get("health", 0)) if local_player is not None else 0
+        max_health = int(local_player.get("max_health", 0)) if local_player is not None else 0
+        revival_eggs = int(local_player.get("revival_eggs", 0)) if local_player is not None else 0
+        restoration_eggs = int(local_player.get("restoration_eggs", 0)) if local_player is not None else 0
+        spirit_seeds = int(local_player.get("spirit_seeds", 0)) if local_player is not None else 0
+
+        overlay = pg.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pg.SRCALPHA)
+        overlay.fill((24, 28, 24, 110))
+        screen.blit(overlay, (0, 0))
+
+        panel = pg.Rect(playfield_rect.left + 58, playfield_rect.top + 40, playfield_rect.width - 116, playfield_rect.height - 80)
+        pg.draw.rect(screen, HUD_PANEL_COLOR, panel, border_radius=24)
+        pg.draw.rect(screen, HUD_PANEL_ACCENT, panel, width=2, border_radius=24)
+
+        title = font.render("Caretaker Details", True, TEXT_COLOR)
+        subtitle = small_font.render("Tab toggles this panel", True, TEXT_COLOR)
+        screen.blit(title, (panel.left + 24, panel.top + 20))
+        screen.blit(subtitle, (panel.left + 24, panel.top + 48))
+
+        info_left = panel.left + 24
+        info_top = panel.top + 92
+        name_text = small_font.render(f"{local_name}  |  State: {local_state}", True, TEXT_COLOR)
+        screen.blit(name_text, (info_left, info_top))
+
+        if max_health > 0:
+            bar_rect = pg.Rect(info_left, info_top + 28, 220, 12)
+            health_ratio = max(0.0, min(1.0, health / max_health))
+            pg.draw.rect(screen, HEALTH_BG_COLOR, bar_rect, border_radius=6)
+            pg.draw.rect(
+                screen,
+                HEALTH_FILL_COLOR,
+                pg.Rect(bar_rect.left, bar_rect.top, int(bar_rect.width * health_ratio), bar_rect.height),
+                border_radius=6,
+            )
+            health_text = small_font.render(f"Health {health}/{max_health}", True, TEXT_COLOR)
+            screen.blit(health_text, (info_left, info_top + 46))
+
+        inventory_top = info_top + 90
+        inv_title = small_font.render("Inventory", True, TEXT_COLOR)
+        screen.blit(inv_title, (info_left, inventory_top))
+        self._draw_inventory_row(screen, small_font, info_left, inventory_top + 26, "Revival Eggs", revival_eggs, REVIVAL_EGG_COLOR)
+        self._draw_inventory_row(screen, small_font, info_left, inventory_top + 54, "Restore Eggs", restoration_eggs, RESTORATION_EGG_COLOR)
+        self._draw_inventory_row(screen, small_font, info_left, inventory_top + 82, "Spirit Seeds", spirit_seeds, SPIRIT_PICKUP_FILL)
+
+        progress_left = panel.centerx + 12
+        progress_top = info_top
+        progress_title = small_font.render("Garden Progress", True, TEXT_COLOR)
+        screen.blit(progress_title, (progress_left, progress_top))
+        progress_lines = [
+            f"Restored zones: {restored_count}/{len(restoration_zones)}",
+            f"Live enemies: {len(self.snapshot.enemies or [])}",
+            f"Loose eggs: {sum(1 for egg in (self.snapshot.eggs or []) if not egg.get('collected', False))}",
+            f"Spirit seeds left: {sum(1 for pickup in (self.snapshot.spirit_pickups or []) if not pickup.get('collected', False))}",
+        ]
+        for index, line in enumerate(progress_lines):
+            line_surf = small_font.render(line, True, TEXT_COLOR)
+            screen.blit(line_surf, (progress_left, progress_top + 28 + index * 24))
+
+        team_top = progress_top + 138
+        team_title = small_font.render("Team", True, TEXT_COLOR)
+        screen.blit(team_title, (progress_left, team_top))
+        for index, player in enumerate(players[:4]):
+            row_top = team_top + 24 + index * 24
+            color = tuple(player["color"])
+            pg.draw.circle(screen, color, (progress_left + 8, row_top + 8), 7)
+            label = (
+                f"{player['name']}  "
+                f"R{int(player.get('revival_eggs', 0))} "
+                f"T{int(player.get('restoration_eggs', 0))} "
+                f"P{int(player.get('spirit_seeds', 0))}  "
+                f"{str(player['state']).title()}"
+            )
+            row_surf = small_font.render(label, True, TEXT_COLOR)
+            screen.blit(row_surf, (progress_left + 22, row_top))
+
+        objective_top = inventory_top + 144
+        objective_title = small_font.render("Objective", True, TEXT_COLOR)
+        screen.blit(objective_title, (info_left, objective_top))
+        wrapped_objective = self._wrap_text(
+            self.snapshot.objective_text or "Move with WASD or arrows. Interact with E or Space.",
+            small_font,
+            panel.width - 48,
+        )
+        for index, line in enumerate(wrapped_objective[:5]):
+            line_surf = small_font.render(line, True, TEXT_COLOR)
+            screen.blit(line_surf, (info_left, objective_top + 28 + index * 22))
+
+        controls_top = panel.bottom - 96
+        controls_title = small_font.render("Controls", True, TEXT_COLOR)
+        screen.blit(controls_title, (info_left, controls_top))
+        control_lines = [
+            "Move: WASD or Arrows",
+            "Interact: E or Space",
+            "Debug Spirit: K",
+        ]
+        for index, line in enumerate(control_lines):
+            line_surf = small_font.render(line, True, TEXT_COLOR)
+            screen.blit(line_surf, (info_left, controls_top + 24 + index * 20))
+
+    def _draw_inventory_row(
+        self,
+        screen: pg.Surface,
+        small_font: pg.font.Font,
+        left: int,
+        top: int,
+        label: str,
+        value: int,
+        swatch_color: tuple[int, ...],
+        *,
+        short: bool = False,
+    ) -> None:
+        swatch_rect = pg.Rect(left, top + 2, 16, 16)
+        pg.draw.rect(screen, swatch_color[:3], swatch_rect, border_radius=5)
+        pg.draw.rect(screen, TEXT_COLOR, swatch_rect, width=1, border_radius=5)
+        rendered_label = label
+        if short:
+            rendered_label = {
+                "Revival Eggs": "Revive",
+                "Restore Eggs": "Restore",
+                "Spirit Seeds": "Seeds",
+            }.get(label, label)
+        line = small_font.render(f"{rendered_label}: {value}", True, TEXT_COLOR)
+        screen.blit(line, (left + 24, top))
+
+    @staticmethod
+    def _wrap_text(text: str, font: pg.font.Font, max_width: int) -> list[str]:
+        words = text.split()
+        if not words:
+            return [""]
+        lines: list[str] = []
+        current = words[0]
+        for word in words[1:]:
+            trial = f"{current} {word}"
+            if font.size(trial)[0] <= max_width:
+                current = trial
+            else:
+                lines.append(current)
+                current = word
+        lines.append(current)
+        return lines
 
     def _active_barriers(self) -> list[TraversalBarrierDef]:
         if self.current_map is None:

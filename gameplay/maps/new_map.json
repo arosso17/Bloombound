@@ -92,42 +92,48 @@
       "x": 780.0,
       "y": 220.0,
       "width": 520.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
     },
     {
       "rect_id": "orchard_west_top",
       "x": 780.0,
       "y": 220.0,
       "width": 40.0,
-      "height": 240.0
+      "height": 240.0,
+      "restored_by_zone_id": "restore_orchard"
     },
     {
       "rect_id": "orchard_west_bottom",
       "x": 780.0,
       "y": 580.0,
       "width": 40.0,
-      "height": 220.0
+      "height": 220.0,
+      "restored_by_zone_id": "restore_orchard"
     },
     {
       "rect_id": "orchard_east",
       "x": 1260.0,
       "y": 220.0,
       "width": 40.0,
-      "height": 580.0
+      "height": 580.0,
+      "restored_by_zone_id": "restore_orchard"
     },
     {
       "rect_id": "orchard_south_left",
       "x": 780.0,
       "y": 760.0,
       "width": 180.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
     },
     {
       "rect_id": "orchard_south_right",
       "x": 1080.0,
       "y": 760.0,
       "width": 220.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
     },
     {
       "rect_id": "grove_north",
@@ -183,161 +189,184 @@
       "x": 1480.0,
       "y": 240.0,
       "width": 560.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_west_top",
       "x": 1480.0,
       "y": 240.0,
       "width": 40.0,
-      "height": 220.0
+      "height": 220.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_west_bottom",
       "x": 1480.0,
       "y": 580.0,
       "width": 40.0,
-      "height": 380.0
+      "height": 380.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_east",
       "x": 2000.0,
       "y": 240.0,
       "width": 40.0,
-      "height": 720.0
+      "height": 720.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_south_left",
       "x": 1480.0,
       "y": 920.0,
       "width": 220.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_south_right",
       "x": 1800.0,
       "y": 920.0,
       "width": 240.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_bed_a",
       "x": 1620.0,
       "y": 400.0,
       "width": 120.0,
-      "height": 240.0
+      "height": 240.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "glass_bed_b",
       "x": 1800.0,
       "y": 560.0,
       "width": 120.0,
-      "height": 220.0
+      "height": 220.0,
+      "restored_by_zone_id": "restore_glasshouse"
     },
     {
       "rect_id": "south_north_left",
       "x": 920.0,
       "y": 1260.0,
       "width": 260.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_north_right",
       "x": 1320.0,
       "y": 1260.0,
       "width": 320.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_west",
       "x": 920.0,
       "y": 1260.0,
       "width": 40.0,
-      "height": 700.0
+      "height": 700.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_east",
       "x": 1600.0,
       "y": 1260.0,
       "width": 40.0,
-      "height": 700.0
+      "height": 700.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_south_left",
       "x": 920.0,
       "y": 1920.0,
       "width": 300.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_south_right",
       "x": 1360.0,
       "y": 1920.0,
       "width": 280.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_island_top",
       "x": 1160.0,
       "y": 1500.0,
       "width": 220.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_island_left",
       "x": 1160.0,
       "y": 1500.0,
       "width": 40.0,
-      "height": 220.0
+      "height": 220.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_island_right",
       "x": 1340.0,
       "y": 1500.0,
       "width": 40.0,
-      "height": 220.0
+      "height": 220.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "south_island_bottom",
       "x": 1160.0,
       "y": 1680.0,
       "width": 220.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "heart_north_left",
       "x": 1760.0,
       "y": 1760.0,
       "width": 150.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "heart_north_right",
       "x": 2050.0,
       "y": 1760.0,
       "width": 150.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "heart_west",
       "x": 1760.0,
       "y": 1760.0,
       "width": 40.0,
-      "height": 420.0
+      "height": 420.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "heart_east",
       "x": 2160.0,
       "y": 1760.0,
       "width": 40.0,
-      "height": 420.0
+      "height": 420.0,
+      "restored_by_zone_id": "restore_south_garden"
     },
     {
       "rect_id": "heart_south",
       "x": 1760.0,
       "y": 2140.0,
       "width": 440.0,
-      "height": 40.0
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
     }
   ],
   "traversal_barriers": [
@@ -396,6 +425,7 @@
     {
       "decoration_id": "flower_orchard_1",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_orchard",
       "x": 958.0,
       "y": 566.0,
       "scale": 0.68
@@ -403,6 +433,7 @@
     {
       "decoration_id": "flower_orchard_2",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_orchard",
       "x": 1112.0,
       "y": 642.0,
       "scale": 0.7
@@ -410,6 +441,7 @@
     {
       "decoration_id": "flower_orchard_3",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_orchard",
       "x": 890.0,
       "y": 672.0,
       "scale": 0.58
@@ -417,6 +449,7 @@
     {
       "decoration_id": "flower_glass_1",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_glasshouse",
       "x": 1688.0,
       "y": 712.0,
       "scale": 0.7
@@ -424,6 +457,7 @@
     {
       "decoration_id": "flower_glass_2",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_glasshouse",
       "x": 1872.0,
       "y": 772.0,
       "scale": 0.66
@@ -431,6 +465,7 @@
     {
       "decoration_id": "flower_glass_3",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_glasshouse",
       "x": 1768.0,
       "y": 872.0,
       "scale": 0.6
@@ -438,6 +473,7 @@
     {
       "decoration_id": "flower_south_1",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
       "x": 1118.0,
       "y": 1436.0,
       "scale": 0.76
@@ -445,6 +481,7 @@
     {
       "decoration_id": "flower_south_2",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
       "x": 1468.0,
       "y": 1518.0,
       "scale": 0.72
@@ -452,6 +489,7 @@
     {
       "decoration_id": "flower_south_3",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
       "x": 1100.0,
       "y": 1784.0,
       "scale": 0.66
@@ -459,6 +497,7 @@
     {
       "decoration_id": "flower_south_4",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
       "x": 1452.0,
       "y": 1822.0,
       "scale": 0.7
@@ -466,6 +505,7 @@
     {
       "decoration_id": "flower_heart_1",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
       "x": 1914.0,
       "y": 1968.0,
       "scale": 0.62
@@ -473,6 +513,7 @@
     {
       "decoration_id": "flower_heart_2",
       "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
       "x": 2058.0,
       "y": 1988.0,
       "scale": 0.62

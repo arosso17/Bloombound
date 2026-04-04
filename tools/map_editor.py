@@ -80,6 +80,7 @@ class MapEditor:
             "aggro_radius": tk.StringVar(value=""),
             "alert_duration_ticks": tk.StringVar(value=""),
             "asset_id": tk.StringVar(value=""),
+            "restored_by_zone_id": tk.StringVar(value=""),
             "enemy_id": tk.StringVar(value=""),
             "required_egg_type": tk.StringVar(value=""),
             "restore_cost": tk.StringVar(value=""),
@@ -343,6 +344,7 @@ class MapEditor:
             ("aggro_radius", "Aggro Radius"),
             ("alert_duration_ticks", "Alert Ticks"),
             ("asset_id", "Asset ID"),
+            ("restored_by_zone_id", "Restored By Zone"),
             ("enemy_id", "Enemy ID"),
             ("required_egg_type", "Needs Egg Type"),
             ("restore_cost", "Restore Cost"),
@@ -456,6 +458,7 @@ class MapEditor:
                 obj["rect_id"] = self.property_vars["id"].get().strip() or obj["rect_id"]
                 obj["width"] = max(1.0, self._parse_float_var("width"))
                 obj["height"] = max(1.0, self._parse_float_var("height"))
+                obj["restored_by_zone_id"] = self.property_vars["restored_by_zone_id"].get().strip()
             elif section == "traversal_barriers":
                 obj["barrier_id"] = self.property_vars["id"].get().strip() or obj["barrier_id"]
                 obj["width"] = max(1.0, self._parse_float_var("width"))
@@ -465,6 +468,7 @@ class MapEditor:
             elif section == "decorations":
                 obj["decoration_id"] = self.property_vars["id"].get().strip() or obj["decoration_id"]
                 obj["asset_id"] = self.property_vars["asset_id"].get().strip() or obj["asset_id"]
+                obj["restored_by_zone_id"] = self.property_vars["restored_by_zone_id"].get().strip()
                 obj["scale"] = max(0.1, self._parse_float_var("scale"))
             elif section == "patrol_points":
                 obj["point_id"] = self.property_vars["id"].get().strip() or obj["point_id"]
@@ -727,6 +731,7 @@ class MapEditor:
         self._set_property("aggro_radius", obj.get("aggro_radius", 220.0 if section == "enemy_spawns" else ""))
         self._set_property("alert_duration_ticks", obj.get("alert_duration_ticks", 80 if section == "enemy_spawns" else ""))
         self._set_property("asset_id", obj.get("asset_id", ""))
+        self._set_property("restored_by_zone_id", obj.get("restored_by_zone_id", ""))
         self._set_property("enemy_id", obj.get("enemy_id", ""))
         self._set_property("required_egg_type", obj.get("required_egg_type", ""))
         self._set_property("restore_cost", obj.get("restore_cost", ""))
@@ -1077,6 +1082,7 @@ class MapEditor:
                 "y": world_y,
                 "width": GRID_SIZE * 6,
                 "height": GRID_SIZE * 2,
+                "restored_by_zone_id": "",
             }
             self.map_data["collision_rects"].append(new_obj)
             self._select_object_ref(("collision_rects", len(self.map_data["collision_rects"]) - 1))
@@ -1103,6 +1109,7 @@ class MapEditor:
                 {
                     "decoration_id": self._next_id("decorations", "decoration_id", "decoration"),
                     "asset_id": self._default_asset_id(),
+                    "restored_by_zone_id": "",
                     "x": world_x,
                     "y": world_y,
                     "scale": 1.0,

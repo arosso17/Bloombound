@@ -10,6 +10,7 @@ class CollisionRect:
     y: float
     width: float
     height: float
+    restored_by_zone_id: str = ""
 
 
 @dataclass(frozen=True)
