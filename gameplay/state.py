@@ -208,7 +208,6 @@ class GameState:
         payload = player.to_dict()
         payload["color"] = list(PLAYER_COLORS[player.color_index])
         payload["hazard_slow_multiplier"] = round(player.hazard_slow_multiplier, 2)
-        payload["last_input_seq"] = player.input_state.seq
         return payload
 
     def _update_player(self, player: PlayerState, dt: float) -> None:

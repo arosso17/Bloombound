@@ -3,7 +3,6 @@ from __future__ import annotations
 import queue
 import socket
 import threading
-import time
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -44,7 +43,9 @@ ENEMY_PATROL_RING = (86, 118, 78)
 ENEMY_ALERT_RING = (224, 162, 81)
 ENEMY_CHASE_RING = (198, 83, 83)
 ENEMY_RETURN_RING = (120, 105, 84)
-SNAPSHOT_EXTRAPOLATION_BLEND = 0.18
+REMOTE_POSITION_LERP = 0.28
+LOCAL_CORRECTION_LERP = 0.35
+LOCAL_SNAP_DISTANCE = 96.0
 
 
 @dataclass
@@ -127,11 +128,7 @@ class EasterClientApp:
         self.current_map: MapDefinition | None = None
         self.current_move_x = 0.0
         self.current_move_y = 0.0
-        self.pending_inputs: list[dict] = []
         self.render_positions: dict[tuple[str, str], tuple[float, float]] = {}
-        self.render_targets: dict[tuple[str, str], tuple[float, float]] = {}
-        self.render_velocities: dict[tuple[str, str], tuple[float, float]] = {}
-        self.last_snapshot_received_at: float | None = None
         self.local_predicted_player: dict | None = None
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
@@ -169,9 +166,9 @@ class EasterClientApp:
             self._handle_network_messages()
             if self.snapshot.match_phase == "playing":
                 keys = pg.key.get_pressed()
-                self._send_input(keys, dt)
+                self._send_input(keys)
                 self._advance_local_prediction(dt)
-                self._advance_remote_smoothing(dt)
+                self._advance_remote_smoothing()
             else:
                 self.current_move_x = 0.0
                 self.current_move_y = 0.0
@@ -196,10 +193,6 @@ class EasterClientApp:
                 self.connected = True
                 self.connection_closed = False
                 self.render_positions.clear()
-                self.render_targets.clear()
-                self.render_velocities.clear()
-                self.pending_inputs.clear()
-                self.last_snapshot_received_at = None
                 self.local_predicted_player = None
                 self._send_profile_update()
             elif message_type == "lobby_state":
@@ -210,10 +203,6 @@ class EasterClientApp:
                 self.can_start = bool(message.get("can_start", False))
                 self.lobby_players = list(message.get("players", []))
                 self.render_positions.clear()
-                self.render_targets.clear()
-                self.render_velocities.clear()
-                self.pending_inputs.clear()
-                self.last_snapshot_received_at = None
                 self.local_predicted_player = None
                 self._sync_local_profile_from_lobby()
             elif message_type == "world_snapshot":
@@ -228,7 +217,7 @@ class EasterClientApp:
                 self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
                 self.snapshot.objective_text = str(message.get("objective_text", ""))
-                self._reconcile_render_state(time.perf_counter())
+                self._reconcile_render_state()
             elif message_type == "disconnected":
                 self.connected = False
                 self.connection_closed = True
@@ -262,7 +251,7 @@ class EasterClientApp:
             self.name_input += event.unicode
             self._send_profile_update()
 
-    def _send_input(self, keys: pg.key.ScancodeWrapper, dt: float) -> None:
+    def _send_input(self, keys: pg.key.ScancodeWrapper) -> None:
         if not self.connected:
             return
         move_x = float(keys[pg.K_d]) - float(keys[pg.K_a])
@@ -270,16 +259,6 @@ class EasterClientApp:
         self.current_move_x = move_x
         self.current_move_y = move_y
         self.input_seq += 1
-        self.pending_inputs.append(
-            {
-                "seq": self.input_seq,
-                "move_x": move_x,
-                "move_y": move_y,
-                "dt": dt,
-            }
-        )
-        if len(self.pending_inputs) > 240:
-            self.pending_inputs = self.pending_inputs[-240:]
         self.network.send(
             {
                 "type": "player_input",
@@ -291,21 +270,12 @@ class EasterClientApp:
             }
         )
 
-    def _reconcile_render_state(self, received_at: float) -> None:
+    def _reconcile_render_state(self) -> None:
         active_keys: set[tuple[str, str]] = set()
-        snapshot_dt = 1.0 / 20.0 if self.last_snapshot_received_at is None else max(0.001, received_at - self.last_snapshot_received_at)
 
         for enemy in self.snapshot.enemies or []:
             key = ("enemy", str(enemy["id"]))
-            target_x = float(enemy["x"])
-            target_y = float(enemy["y"])
-            previous_target = self.render_targets.get(key, (target_x, target_y))
-            self.render_positions.setdefault(key, previous_target)
-            self.render_targets[key] = (target_x, target_y)
-            self.render_velocities[key] = (
-                (target_x - previous_target[0]) / snapshot_dt,
-                (target_y - previous_target[1]) / snapshot_dt,
-            )
+            self.render_positions.setdefault(key, (float(enemy["x"]), float(enemy["y"])))
             active_keys.add(key)
 
         for player in self.snapshot.players or []:
@@ -314,15 +284,7 @@ class EasterClientApp:
                 self._reconcile_local_prediction(player)
                 continue
             key = ("player", player_id)
-            target_x = float(player["x"])
-            target_y = float(player["y"])
-            previous_target = self.render_targets.get(key, (target_x, target_y))
-            self.render_positions.setdefault(key, previous_target)
-            self.render_targets[key] = (target_x, target_y)
-            self.render_velocities[key] = (
-                (target_x - previous_target[0]) / snapshot_dt,
-                (target_y - previous_target[1]) / snapshot_dt,
-            )
+            self.render_positions.setdefault(key, (float(player["x"]), float(player["y"])))
             active_keys.add(key)
 
         self.render_positions = {
@@ -330,71 +292,74 @@ class EasterClientApp:
             for key, position in self.render_positions.items()
             if key in active_keys
         }
-        self.render_targets = {
-            key: position
-            for key, position in self.render_targets.items()
-            if key in active_keys
-        }
-        self.render_velocities = {
-            key: velocity
-            for key, velocity in self.render_velocities.items()
-            if key in active_keys
-        }
-        self.last_snapshot_received_at = received_at
 
     def _reconcile_local_prediction(self, player: dict) -> None:
+        server_x = float(player["x"])
+        server_y = float(player["y"])
+        if self.local_predicted_player is None:
+            self.local_predicted_player = deepcopy(player)
+            self.local_predicted_player["x"] = server_x
+            self.local_predicted_player["y"] = server_y
+            return
+
+        predicted_x = float(self.local_predicted_player.get("x", server_x))
+        predicted_y = float(self.local_predicted_player.get("y", server_y))
+        if ((predicted_x - server_x) ** 2 + (predicted_y - server_y) ** 2) ** 0.5 > LOCAL_SNAP_DISTANCE:
+            predicted_x = server_x
+            predicted_y = server_y
+        else:
+            predicted_x += (server_x - predicted_x) * LOCAL_CORRECTION_LERP
+            predicted_y += (server_y - predicted_y) * LOCAL_CORRECTION_LERP
+
         self.local_predicted_player = deepcopy(player)
-        last_processed_seq = int(player.get("last_input_seq", 0))
-        self.pending_inputs = [pending for pending in self.pending_inputs if int(pending["seq"]) > last_processed_seq]
-        for pending in self.pending_inputs:
-            self._apply_predicted_movement(
-                self.local_predicted_player,
-                float(pending["move_x"]),
-                float(pending["move_y"]),
-                float(pending["dt"]),
-            )
+        self.local_predicted_player["x"] = predicted_x
+        self.local_predicted_player["y"] = predicted_y
 
     def _advance_local_prediction(self, dt: float) -> None:
         if self.local_predicted_player is None or self.current_map is None:
             return
 
-        self._apply_predicted_movement(self.local_predicted_player, self.current_move_x, self.current_move_y, dt)
-
-    def _apply_predicted_movement(self, player: dict, move_x: float, move_y: float, dt: float) -> None:
-        if self.current_map is None:
-            return
-
-        move_x = max(-1.0, min(1.0, move_x))
-        move_y = max(-1.0, min(1.0, move_y))
+        move_x = max(-1.0, min(1.0, self.current_move_x))
+        move_y = max(-1.0, min(1.0, self.current_move_y))
         magnitude = (move_x * move_x + move_y * move_y) ** 0.5
         if magnitude > 1.0:
             move_x /= magnitude
             move_y /= magnitude
 
-        speed = SPIRIT_SPEED if player.get("state") == "spirit" else ALIVE_SPEED
-        speed *= float(player.get("hazard_slow_multiplier", 1.0))
+        speed = SPIRIT_SPEED if self.local_predicted_player.get("state") == "spirit" else ALIVE_SPEED
+        speed *= float(self.local_predicted_player.get("hazard_slow_multiplier", 1.0))
         next_x, next_y = move_circle(
-            x=float(player["x"]),
-            y=float(player["y"]),
-            radius=float(player["radius"]),
+            x=float(self.local_predicted_player["x"]),
+            y=float(self.local_predicted_player["y"]),
+            radius=float(self.local_predicted_player["radius"]),
             delta_x=move_x * speed * dt,
             delta_y=move_y * speed * dt,
             world_width=self.snapshot.world_width,
             world_height=self.snapshot.world_height,
             collision_rects=self.current_map.collision_rects,
         )
-        player["x"] = next_x
-        player["y"] = next_y
+        self.local_predicted_player["x"] = next_x
+        self.local_predicted_player["y"] = next_y
 
-    def _advance_remote_smoothing(self, dt: float) -> None:
-        for key, (current_x, current_y) in list(self.render_positions.items()):
-            velocity_x, velocity_y = self.render_velocities.get(key, (0.0, 0.0))
-            target_x, target_y = self.render_targets.get(key, (current_x, current_y))
-            next_x = current_x + velocity_x * dt
-            next_y = current_y + velocity_y * dt
-            next_x += (target_x - next_x) * SNAPSHOT_EXTRAPOLATION_BLEND
-            next_y += (target_y - next_y) * SNAPSHOT_EXTRAPOLATION_BLEND
-            self.render_positions[key] = (next_x, next_y)
+    def _advance_remote_smoothing(self) -> None:
+        for enemy in self.snapshot.enemies or []:
+            key = ("enemy", str(enemy["id"]))
+            current_x, current_y = self.render_positions.get(key, (float(enemy["x"]), float(enemy["y"])))
+            self.render_positions[key] = (
+                current_x + (float(enemy["x"]) - current_x) * REMOTE_POSITION_LERP,
+                current_y + (float(enemy["y"]) - current_y) * REMOTE_POSITION_LERP,
+            )
+
+        for player in self.snapshot.players or []:
+            player_id = str(player["id"])
+            if player_id == self.player_id:
+                continue
+            key = ("player", player_id)
+            current_x, current_y = self.render_positions.get(key, (float(player["x"]), float(player["y"])))
+            self.render_positions[key] = (
+                current_x + (float(player["x"]) - current_x) * REMOTE_POSITION_LERP,
+                current_y + (float(player["y"]) - current_y) * REMOTE_POSITION_LERP,
+            )
 
     def _display_player(self, player: dict) -> dict:
         if str(player["id"]) == self.player_id and self.local_predicted_player is not None:

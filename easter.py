@@ -12,7 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     server_parser = subparsers.add_parser("server", help="Run the authoritative game server")
     server_parser.add_argument("--host", default="0.0.0.0")
     server_parser.add_argument("--port", type=int, default=5050)
-    server_parser.add_argument("--tick-rate", type=int, default=20)
+    server_parser.add_argument("--tick-rate", type=int, default=30)
     server_parser.add_argument("--expected-players", type=int, default=2)
     server_parser.add_argument("--map-id", default="heart_garden_slice")
 
@@ -23,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     host_parser = subparsers.add_parser("host", help="Run a local server and client together")
     host_parser.add_argument("--port", type=int, default=5050)
-    host_parser.add_argument("--tick-rate", type=int, default=20)
+    host_parser.add_argument("--tick-rate", type=int, default=30)
     host_parser.add_argument("--expected-players", type=int, default=2)
     host_parser.add_argument("--name", default="Host")
     host_parser.add_argument("--map-id", default="heart_garden_slice")
