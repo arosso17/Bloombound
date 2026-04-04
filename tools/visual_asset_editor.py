@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import tkinter as tk
+from copy import deepcopy
 from pathlib import Path
 from tkinter import colorchooser, filedialog, messagebox, ttk
 
@@ -49,6 +50,7 @@ class VisualAssetEditor:
         self.drag_last_world: tuple[float, float] | None = None
         self.drag_mode: str | None = None
         self.drag_handle: str | None = None
+        self.nudge_step = 1.0
 
         self.asset_id_var = tk.StringVar(value=self.asset["asset_id"])
         self.canvas_width_var = tk.StringVar(value=str(self.asset["canvas"]["width"]))
@@ -69,6 +71,7 @@ class VisualAssetEditor:
 
         self._build_layout()
         self._refresh_all()
+        self._bind_shortcuts()
 
     def _build_layout(self) -> None:
         self.root.columnconfigure(2, weight=1)
@@ -88,6 +91,13 @@ class VisualAssetEditor:
         self._build_sidebar(sidebar)
         self._build_editor(editor)
         self._build_preview(preview)
+
+    def _bind_shortcuts(self) -> None:
+        self.root.bind_all("<Control-d>", lambda event: self._handle_duplicate_shortcut(event))
+        self.root.bind_all("<Left>", lambda event: self._handle_nudge_shortcut(event, -self._nudge_amount(event), 0.0))
+        self.root.bind_all("<Right>", lambda event: self._handle_nudge_shortcut(event, self._nudge_amount(event), 0.0))
+        self.root.bind_all("<Up>", lambda event: self._handle_nudge_shortcut(event, 0.0, -self._nudge_amount(event)))
+        self.root.bind_all("<Down>", lambda event: self._handle_nudge_shortcut(event, 0.0, self._nudge_amount(event)))
 
     def _build_sidebar(self, parent: ttk.Frame) -> None:
         ttk.Label(parent, text="Asset").grid(row=0, column=0, sticky="w")
@@ -120,8 +130,9 @@ class VisualAssetEditor:
         ttk.Button(shape_buttons, text="Add Ellipse", command=lambda: self.add_shape("ellipse")).grid(row=2, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Line", command=lambda: self.add_shape("line")).grid(row=3, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Delete", command=self.delete_shape).grid(row=4, column=0, pady=(8, 2), sticky="ew")
-        ttk.Button(shape_buttons, text="Move Up", command=lambda: self.move_shape(-1)).grid(row=5, column=0, pady=2, sticky="ew")
-        ttk.Button(shape_buttons, text="Move Down", command=lambda: self.move_shape(1)).grid(row=6, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Duplicate", command=self.duplicate_shape).grid(row=5, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Move Up", command=lambda: self.move_shape(-1)).grid(row=6, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Move Down", command=lambda: self.move_shape(1)).grid(row=7, column=0, pady=2, sticky="ew")
 
     def _build_editor(self, parent: ttk.Frame) -> None:
         ttk.Label(parent, text="Shape Properties").grid(row=0, column=0, sticky="w", pady=(0, 8))
@@ -143,7 +154,10 @@ class VisualAssetEditor:
             ttk.Label(parent, text=label).grid(row=row_index, column=0, sticky="w", pady=3)
             ttk.Entry(parent, textvariable=self.shape_fields[field_key], width=16).grid(row=row_index, column=1, sticky="ew", padx=(8, 6), pady=3)
             if field_key in {"fill", "outline"}:
-                ttk.Button(parent, text="Pick", command=lambda key=field_key: self.pick_color(key)).grid(row=row_index, column=2, sticky="ew", pady=3)
+                color_buttons = ttk.Frame(parent)
+                color_buttons.grid(row=row_index, column=2, sticky="ew", pady=3)
+                ttk.Button(color_buttons, text="Pick", command=lambda key=field_key: self.pick_color(key)).grid(row=0, column=0, padx=(0, 4))
+                ttk.Button(color_buttons, text="None", command=lambda key=field_key: self.clear_color(key)).grid(row=0, column=1)
 
         ttk.Button(parent, text="Apply Shape Changes", command=self.apply_shape_changes).grid(
             row=len(field_names) + 1,
@@ -250,6 +264,21 @@ class VisualAssetEditor:
         self._refresh_shape_list()
         self._draw_preview()
 
+    def duplicate_shape(self) -> None:
+        index = self.selected_shape_index()
+        if index is None:
+            return
+        new_shape = deepcopy(self.asset["shapes"][index])
+        new_shape["x"] = round(float(new_shape.get("x", 0)) + 8.0, 2)
+        new_shape["y"] = round(float(new_shape.get("y", 0)) + 8.0, 2)
+        if new_shape["kind"] == "line":
+            new_shape["x2"] = round(float(new_shape.get("x2", 0)) + 8.0, 2)
+            new_shape["y2"] = round(float(new_shape.get("y2", 0)) + 8.0, 2)
+        insert_index = index + 1
+        self.asset["shapes"].insert(insert_index, new_shape)
+        self._refresh_shape_list()
+        self._select_shape(insert_index)
+
     def move_shape(self, direction: int) -> None:
         index = self.selected_shape_index()
         if index is None:
@@ -293,6 +322,9 @@ class VisualAssetEditor:
         if not chosen[1]:
             return
         self.shape_fields[field_key].set(chosen[1])
+
+    def clear_color(self, field_key: str) -> None:
+        self.shape_fields[field_key].set("")
 
     def _load_selected_shape(self) -> None:
         index = self.selected_shape_index()
@@ -515,6 +547,38 @@ class VisualAssetEditor:
         self.drag_last_world = None
         self.drag_mode = None
         self.drag_handle = None
+
+    def nudge_selected_shape(self, delta_x: float, delta_y: float) -> None:
+        index = self.selected_shape_index()
+        if index is None or index >= len(self.asset["shapes"]):
+            return
+        shape = self.asset["shapes"][index]
+        shape["x"] = round(float(shape.get("x", 0)) + delta_x, 2)
+        shape["y"] = round(float(shape.get("y", 0)) + delta_y, 2)
+        if shape["kind"] == "line":
+            shape["x2"] = round(float(shape.get("x2", 0)) + delta_x, 2)
+            shape["y2"] = round(float(shape.get("y2", 0)) + delta_y, 2)
+        self._load_selected_shape()
+
+    def _handle_duplicate_shortcut(self, event: tk.Event) -> str | None:
+        if self._focused_widget_is_text_input():
+            return None
+        self.duplicate_shape()
+        return "break"
+
+    def _handle_nudge_shortcut(self, event: tk.Event, delta_x: float, delta_y: float) -> str | None:
+        if self._focused_widget_is_text_input():
+            return None
+        self.nudge_selected_shape(delta_x, delta_y)
+        return "break"
+
+    def _focused_widget_is_text_input(self) -> bool:
+        focused = self.root.focus_get()
+        return isinstance(focused, (tk.Entry, tk.Text))
+
+    def _nudge_amount(self, event: tk.Event) -> float:
+        shift_mask = 0x0001
+        return 10.0 if (event.state & shift_mask) else self.nudge_step
 
     def _select_shape(self, index: int | None) -> None:
         self.shape_listbox.selection_clear(0, tk.END)
