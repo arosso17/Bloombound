@@ -47,6 +47,8 @@ class VisualAssetEditor:
         self.preview_offset_y = 0.0
         self.drag_shape_index: int | None = None
         self.drag_last_world: tuple[float, float] | None = None
+        self.drag_mode: str | None = None
+        self.drag_handle: str | None = None
 
         self.asset_id_var = tk.StringVar(value=self.asset["asset_id"])
         self.canvas_width_var = tk.StringVar(value=str(self.asset["canvas"]["width"]))
@@ -171,6 +173,8 @@ class VisualAssetEditor:
         self.asset_path = None
         self.drag_shape_index = None
         self.drag_last_world = None
+        self.drag_mode = None
+        self.drag_handle = None
         self._refresh_all()
 
     def open_asset(self) -> None:
@@ -185,6 +189,8 @@ class VisualAssetEditor:
         self.asset = json.loads(self.asset_path.read_text(encoding="utf-8"))
         self.drag_shape_index = None
         self.drag_last_world = None
+        self.drag_mode = None
+        self.drag_handle = None
         self._refresh_all()
 
     def save_asset(self) -> None:
@@ -239,6 +245,8 @@ class VisualAssetEditor:
         del self.asset["shapes"][index]
         self.drag_shape_index = None
         self.drag_last_world = None
+        self.drag_mode = None
+        self.drag_handle = None
         self._refresh_shape_list()
         self._draw_preview()
 
@@ -371,6 +379,22 @@ class VisualAssetEditor:
                     width=2,
                     dash=(6, 4),
                 )
+            for handle_name, handle_x, handle_y in self._shape_resize_handles(
+                self.asset["shapes"][selected_index],
+                offset_x,
+                offset_y,
+                scale,
+            ):
+                self.preview_canvas.create_rectangle(
+                    handle_x - 5,
+                    handle_y - 5,
+                    handle_x + 5,
+                    handle_y + 5,
+                    fill="#ffffff",
+                    outline="#2f6fed",
+                    width=2,
+                    tags=("handle", f"handle-{handle_name}"),
+                )
 
     def _draw_preview_shape(self, shape: dict, offset_x: float, offset_y: float, scale: float, index: int) -> None:
         fill = rgb_to_hex(shape.get("fill"))
@@ -436,14 +460,28 @@ class VisualAssetEditor:
 
     def on_preview_press(self, event: tk.Event) -> None:
         world_point = self._preview_to_world(event.x, event.y)
+        selected_index = self.selected_shape_index()
+        if selected_index is not None:
+            handle_name = self._handle_at_screen_point(selected_index, event.x, event.y)
+            if handle_name is not None:
+                self.drag_shape_index = selected_index
+                self.drag_last_world = world_point
+                self.drag_mode = "resize"
+                self.drag_handle = handle_name
+                return
+
         shape_index = self._shape_at_world_point(*world_point)
         self._select_shape(shape_index)
         if shape_index is None:
             self.drag_shape_index = None
             self.drag_last_world = None
+            self.drag_mode = None
+            self.drag_handle = None
             return
         self.drag_shape_index = shape_index
         self.drag_last_world = world_point
+        self.drag_mode = "move"
+        self.drag_handle = None
 
     def on_preview_drag(self, event: tk.Event) -> None:
         if self.drag_shape_index is None or self.drag_last_world is None:
@@ -452,18 +490,22 @@ class VisualAssetEditor:
             return
 
         world_x, world_y = self._preview_to_world(event.x, event.y)
-        last_x, last_y = self.drag_last_world
-        delta_x = world_x - last_x
-        delta_y = world_y - last_y
-        if delta_x == 0 and delta_y == 0:
-            return
 
         shape = self.asset["shapes"][self.drag_shape_index]
-        shape["x"] = round(float(shape.get("x", 0)) + delta_x, 2)
-        shape["y"] = round(float(shape.get("y", 0)) + delta_y, 2)
-        if shape["kind"] == "line":
-            shape["x2"] = round(float(shape.get("x2", 0)) + delta_x, 2)
-            shape["y2"] = round(float(shape.get("y2", 0)) + delta_y, 2)
+        if self.drag_mode == "resize":
+            self._resize_shape(shape, self.drag_handle, world_x, world_y)
+        else:
+            last_x, last_y = self.drag_last_world
+            delta_x = world_x - last_x
+            delta_y = world_y - last_y
+            if delta_x == 0 and delta_y == 0:
+                return
+
+            shape["x"] = round(float(shape.get("x", 0)) + delta_x, 2)
+            shape["y"] = round(float(shape.get("y", 0)) + delta_y, 2)
+            if shape["kind"] == "line":
+                shape["x2"] = round(float(shape.get("x2", 0)) + delta_x, 2)
+                shape["y2"] = round(float(shape.get("y2", 0)) + delta_y, 2)
 
         self.drag_last_world = (world_x, world_y)
         self._load_selected_shape()
@@ -471,6 +513,8 @@ class VisualAssetEditor:
     def on_preview_release(self, _event: tk.Event) -> None:
         self.drag_shape_index = None
         self.drag_last_world = None
+        self.drag_mode = None
+        self.drag_handle = None
 
     def _select_shape(self, index: int | None) -> None:
         self.shape_listbox.selection_clear(0, tk.END)
@@ -491,6 +535,101 @@ class VisualAssetEditor:
             if self._shape_contains_point(self.asset["shapes"][index], world_x, world_y):
                 return index
         return None
+
+    def _handle_at_screen_point(self, shape_index: int, screen_x: float, screen_y: float) -> str | None:
+        if shape_index >= len(self.asset["shapes"]):
+            return None
+        for handle_name, handle_x, handle_y in self._shape_resize_handles(
+            self.asset["shapes"][shape_index],
+            self.preview_offset_x,
+            self.preview_offset_y,
+            self.preview_scale,
+        ):
+            if abs(screen_x - handle_x) <= 7 and abs(screen_y - handle_y) <= 7:
+                return handle_name
+        return None
+
+    def _shape_resize_handles(
+        self,
+        shape: dict,
+        offset_x: float,
+        offset_y: float,
+        scale: float,
+    ) -> list[tuple[str, float, float]]:
+        kind = shape["kind"]
+        if kind == "circle":
+            x = offset_x + float(shape.get("x", 0)) * scale
+            y = offset_y + float(shape.get("y", 0)) * scale
+            radius = float(shape.get("radius", 0)) * scale
+            return [
+                ("n", x, y - radius),
+                ("e", x + radius, y),
+                ("s", x, y + radius),
+                ("w", x - radius, y),
+            ]
+
+        if kind in {"rect", "ellipse"}:
+            x = offset_x + float(shape.get("x", 0)) * scale
+            y = offset_y + float(shape.get("y", 0)) * scale
+            width = float(shape.get("width", 0)) * scale
+            height = float(shape.get("height", 0)) * scale
+            return [
+                ("nw", x, y),
+                ("ne", x + width, y),
+                ("sw", x, y + height),
+                ("se", x + width, y + height),
+            ]
+
+        if kind == "line":
+            x1 = offset_x + float(shape.get("x", 0)) * scale
+            y1 = offset_y + float(shape.get("y", 0)) * scale
+            x2 = offset_x + float(shape.get("x2", 0)) * scale
+            y2 = offset_y + float(shape.get("y2", 0)) * scale
+            return [("start", x1, y1), ("end", x2, y2)]
+
+        return []
+
+    def _resize_shape(self, shape: dict, handle_name: str | None, world_x: float, world_y: float) -> None:
+        if handle_name is None:
+            return
+        kind = shape["kind"]
+        min_size = 4.0
+
+        if kind == "circle":
+            center_x = float(shape.get("x", 0))
+            center_y = float(shape.get("y", 0))
+            radius = ((world_x - center_x) ** 2 + (world_y - center_y) ** 2) ** 0.5
+            shape["radius"] = round(max(min_size, radius), 2)
+            return
+
+        if kind in {"rect", "ellipse"}:
+            left = float(shape.get("x", 0))
+            top = float(shape.get("y", 0))
+            right = left + float(shape.get("width", 0))
+            bottom = top + float(shape.get("height", 0))
+
+            if "w" in handle_name:
+                left = min(world_x, right - min_size)
+            if "e" in handle_name:
+                right = max(world_x, left + min_size)
+            if "n" in handle_name:
+                top = min(world_y, bottom - min_size)
+            if "s" in handle_name:
+                bottom = max(world_y, top + min_size)
+
+            shape["x"] = round(left, 2)
+            shape["y"] = round(top, 2)
+            shape["width"] = round(max(min_size, right - left), 2)
+            shape["height"] = round(max(min_size, bottom - top), 2)
+            return
+
+        if kind == "line":
+            if handle_name == "start":
+                shape["x"] = round(world_x, 2)
+                shape["y"] = round(world_y, 2)
+            elif handle_name == "end":
+                shape["x2"] = round(world_x, 2)
+                shape["y2"] = round(world_y, 2)
 
     def _shape_contains_point(self, shape: dict, world_x: float, world_y: float) -> bool:
         kind = shape["kind"]
