@@ -41,15 +41,7 @@ class GameState:
             interact_radius=shrine_def.interact_radius,
             revive_radius=shrine_def.revive_radius,
         )
-        enemy_def = self.map.enemy_spawns[0]
-        self.enemy = EnemyState(
-            enemy_def.enemy_id,
-            enemy_def.x,
-            enemy_def.y,
-            radius=enemy_def.radius,
-            speed=enemy_def.speed,
-            damage_per_second=enemy_def.damage_per_second,
-        )
+        self.enemies = self._build_enemies_from_map()
         bloom_def = self.map.final_bloom
         self.final_bloom = FinalBloomState(
             bloom_def.bloom_id,
@@ -93,9 +85,7 @@ class GameState:
         self.tick = 0
         self.final_bloom.restored = False
         self._reset_eggs()
-        enemy_def = self.map.enemy_spawns[0]
-        self.enemy.x = enemy_def.x
-        self.enemy.y = enemy_def.y
+        self._reset_enemies()
         for index, player in enumerate(self.players.values()):
             spawn = self.map.player_spawns[index % len(self.map.player_spawns)]
             player.x = spawn.x
@@ -149,7 +139,7 @@ class GameState:
         self.tick += 1
         for player in self.players.values():
             self._update_player(player, dt)
-        self._update_enemy(dt)
+        self._update_enemies(dt)
         for player in self.players.values():
             player.prev_input_state = PlayerInput(
                 move_x=player.input_state.move_x,
@@ -173,7 +163,7 @@ class GameState:
             "players": [self._player_snapshot(player) for player in self.players.values()],
             "eggs": [egg.to_dict() for egg in self.eggs],
             "shrine": self.shrine.to_dict(),
-            "enemy": self.enemy.to_dict(),
+            "enemies": [enemy.to_dict() for enemy in self.enemies],
             "final_bloom": self.final_bloom.to_dict(),
             "objective_text": self._objective_text(),
         }
@@ -252,34 +242,35 @@ class GameState:
         self.final_bloom.restored = True
         return True
 
-    def _update_enemy(self, dt: float) -> None:
+    def _update_enemies(self, dt: float) -> None:
         alive_targets = [player for player in self.players.values() if player.state == "alive"]
-        if not alive_targets:
+        if not alive_targets or not self.enemies:
             return
 
-        target = min(
-            alive_targets,
-            key=lambda player: distance(player.x, player.y, self.enemy.x, self.enemy.y),
-        )
-        delta_x = target.x - self.enemy.x
-        delta_y = target.y - self.enemy.y
-        magnitude = math.hypot(delta_x, delta_y)
-        if magnitude > 0.0:
-            self.enemy.x, self.enemy.y = move_circle(
-                x=self.enemy.x,
-                y=self.enemy.y,
-                radius=self.enemy.radius,
-                delta_x=(delta_x / magnitude) * self.enemy.speed * dt,
-                delta_y=(delta_y / magnitude) * self.enemy.speed * dt,
-                world_width=self.map.world_width,
-                world_height=self.map.world_height,
-                collision_rects=self.map.collision_rects,
+        for enemy in self.enemies:
+            target = min(
+                alive_targets,
+                key=lambda player: distance(player.x, player.y, enemy.x, enemy.y),
             )
+            delta_x = target.x - enemy.x
+            delta_y = target.y - enemy.y
+            magnitude = math.hypot(delta_x, delta_y)
+            if magnitude > 0.0:
+                enemy.x, enemy.y = move_circle(
+                    x=enemy.x,
+                    y=enemy.y,
+                    radius=enemy.radius,
+                    delta_x=(delta_x / magnitude) * enemy.speed * dt,
+                    delta_y=(delta_y / magnitude) * enemy.speed * dt,
+                    world_width=self.map.world_width,
+                    world_height=self.map.world_height,
+                    collision_rects=self.map.collision_rects,
+                )
 
-        if distance(target.x, target.y, self.enemy.x, self.enemy.y) <= target.radius + self.enemy.radius:
-            target.health = max(0, int(target.health - self.enemy.damage_per_second * dt))
-            if target.health <= 0:
-                self._set_player_spirit(target)
+            if distance(target.x, target.y, enemy.x, enemy.y) <= target.radius + enemy.radius:
+                target.health = max(0, int(target.health - enemy.damage_per_second * dt))
+                if target.health <= 0:
+                    self._set_player_spirit(target)
 
     def _set_player_spirit(self, player: PlayerState) -> None:
         if player.state == "spirit":
@@ -302,8 +293,24 @@ class GameState:
             for spawn in self.map.egg_spawns
         ]
 
+    def _build_enemies_from_map(self) -> list[EnemyState]:
+        return [
+            EnemyState(
+                spawn.enemy_id,
+                spawn.x,
+                spawn.y,
+                radius=spawn.radius,
+                speed=spawn.speed,
+                damage_per_second=spawn.damage_per_second,
+            )
+            for spawn in self.map.enemy_spawns
+        ]
+
     def _reset_eggs(self) -> None:
         self.eggs = self._build_eggs_from_map()
+
+    def _reset_enemies(self) -> None:
+        self.enemies = self._build_enemies_from_map()
 
     def _try_collect_eggs(self, player: PlayerState) -> None:
         for egg in self.eggs:
@@ -330,5 +337,5 @@ class GameState:
         if any(player.revival_eggs > 0 for player in self.players.values()):
             return "Carry the revival egg to the Heart Bloom to complete the map."
         if any(not egg.collected for egg in self.eggs):
-            return "Gather the map's revival eggs before the bramble catches you."
+            return "Gather the map's revival eggs before the brambles catch you."
         return "Bring your collected eggs to the Heart Bloom to complete the map."

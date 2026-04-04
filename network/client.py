@@ -40,7 +40,7 @@ class ClientSnapshot:
     players: list[dict] | None = None
     eggs: list[dict] | None = None
     shrine: dict | None = None
-    enemy: dict | None = None
+    enemies: list[dict] | None = None
     final_bloom: dict | None = None
     objective_text: str = ""
 
@@ -97,7 +97,7 @@ class EasterClientApp:
         self.name_input = name[:24]
         self.selected_color_index = 0
         self.profile_initialized = False
-        self.snapshot = ClientSnapshot(players=[], eggs=[], shrine=None)
+        self.snapshot = ClientSnapshot(players=[], eggs=[], shrine=None, enemies=[])
         self.connected = False
         self.connection_closed = False
         self.input_seq = 0
@@ -179,7 +179,7 @@ class EasterClientApp:
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.eggs = list(message.get("eggs", []))
                 self.snapshot.shrine = message.get("shrine")
-                self.snapshot.enemy = message.get("enemy")
+                self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
                 self.snapshot.objective_text = str(message.get("objective_text", ""))
             elif message_type == "disconnected":
@@ -273,10 +273,10 @@ class EasterClientApp:
             )
             render_visual_asset(screen, self.visual_assets["egg"], (egg_x, egg_y))
 
-        if self.snapshot.enemy:
+        for enemy in self.snapshot.enemies or []:
             enemy_x, enemy_y = self._screen_point(
-                self.snapshot.enemy["x"],
-                self.snapshot.enemy["y"],
+                enemy["x"],
+                enemy["y"],
                 playfield_rect,
                 camera_rect,
             )
