@@ -175,7 +175,7 @@
       "spawn_id": "egg_north_revival",
       "x": 560.0,
       "y": 206.0,
-      "egg_type": "revival"
+      "egg_type": "restoration"
     },
     {
       "spawn_id": "egg_greenhouse_restore",
