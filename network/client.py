@@ -284,6 +284,7 @@ class EasterClientApp:
             px, py = self._screen_point(player["x"], player["y"], playfield_rect, camera_rect)
             color = tuple(player["color"])
             radius = int(player["radius"] * CAMERA_ZOOM)
+            ring_radius = radius + 5
             if player["state"] == "spirit":
                 pg.draw.circle(screen, SPIRIT_COLOR, (px, py), radius + 2)
                 pg.draw.circle(screen, color, (px, py), radius, width=2)
@@ -296,8 +297,8 @@ class EasterClientApp:
                     scale=player_scale,
                     color_overrides={"player_head": color},
                 )
+                ring_radius = max(ring_radius, int((self.visual_assets["player"].width * player_scale) / 2) + 2)
             if player["id"] == self.player_id:
-                ring_radius = max(radius + 5, int((self.visual_assets["player"].width * player_scale) / 2) + 2)
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
             name_surf = small_font.render(
                 f"{player['name']} ({player['revival_eggs']})",
