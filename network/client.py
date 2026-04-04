@@ -13,6 +13,7 @@ from network.shared import read_messages_forever, safe_close, send_message
 
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 700
+CAMERA_ZOOM = 1.0
 BACKGROUND_COLOR = (232, 228, 214)
 PLAYFIELD_COLOR = (205, 214, 188)
 SHRINE_COLOR = (255, 216, 138)
@@ -223,17 +224,14 @@ class EasterClientApp:
         screen.fill(BACKGROUND_COLOR)
         playfield_rect = pg.Rect(32, 96, WINDOW_WIDTH - 64, WINDOW_HEIGHT - 132)
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
-
-        scale_x = playfield_rect.width / self.snapshot.world_width
-        scale_y = playfield_rect.height / self.snapshot.world_height
+        camera_rect = self._camera_rect(playfield_rect)
 
         if self.snapshot.shrine:
             shrine_x, shrine_y = self._screen_point(
                 self.snapshot.shrine["x"],
                 self.snapshot.shrine["y"],
                 playfield_rect,
-                scale_x,
-                scale_y,
+                camera_rect,
             )
             pg.draw.circle(screen, SHRINE_COLOR, (shrine_x, shrine_y), 26)
             pg.draw.circle(screen, (255, 247, 215), (shrine_x, shrine_y), 42, width=3)
@@ -243,8 +241,7 @@ class EasterClientApp:
                 self.snapshot.egg["x"],
                 self.snapshot.egg["y"],
                 playfield_rect,
-                scale_x,
-                scale_y,
+                camera_rect,
             )
             pg.draw.ellipse(screen, EGG_COLOR, pg.Rect(egg_x - 10, egg_y - 14, 20, 28))
 
@@ -253,17 +250,16 @@ class EasterClientApp:
                 self.snapshot.enemy["x"],
                 self.snapshot.enemy["y"],
                 playfield_rect,
-                scale_x,
-                scale_y,
+                camera_rect,
             )
-            enemy_radius = int(self.snapshot.enemy["radius"] * min(scale_x, scale_y))
+            enemy_radius = int(self.snapshot.enemy["radius"] * CAMERA_ZOOM)
             pg.draw.circle(screen, ENEMY_COLOR, (enemy_x, enemy_y), enemy_radius + 3)
             pg.draw.circle(screen, ENEMY_CORE_COLOR, (enemy_x, enemy_y), max(4, enemy_radius - 4))
 
         for player in self.snapshot.players or []:
-            px, py = self._screen_point(player["x"], player["y"], playfield_rect, scale_x, scale_y)
+            px, py = self._screen_point(player["x"], player["y"], playfield_rect, camera_rect)
             color = tuple(player["color"])
-            radius = int(player["radius"] * min(scale_x, scale_y))
+            radius = int(player["radius"] * CAMERA_ZOOM)
             if player["state"] == "spirit":
                 pg.draw.circle(screen, SPIRIT_COLOR, (px, py), radius + 2)
                 pg.draw.circle(screen, color, (px, py), radius, width=2)
@@ -381,13 +377,42 @@ class EasterClientApp:
         world_x: float,
         world_y: float,
         playfield_rect: pg.Rect,
-        scale_x: float,
-        scale_y: float,
+        camera_rect: pg.Rect,
     ) -> tuple[int, int]:
         return (
-            int(playfield_rect.left + world_x * scale_x),
-            int(playfield_rect.top + world_y * scale_y),
+            int(playfield_rect.left + (world_x - camera_rect.left) * CAMERA_ZOOM),
+            int(playfield_rect.top + (world_y - camera_rect.top) * CAMERA_ZOOM),
         )
+
+    def _camera_rect(self, playfield_rect: pg.Rect) -> pg.Rect:
+        visible_width = playfield_rect.width / CAMERA_ZOOM
+        visible_height = playfield_rect.height / CAMERA_ZOOM
+        local_player = self._local_player()
+
+        if local_player is None:
+            camera_left = max(0.0, (self.snapshot.world_width - visible_width) / 2)
+            camera_top = max(0.0, (self.snapshot.world_height - visible_height) / 2)
+        else:
+            camera_left = local_player["x"] - visible_width / 2
+            camera_top = local_player["y"] - visible_height / 2
+
+        max_left = max(0.0, self.snapshot.world_width - visible_width)
+        max_top = max(0.0, self.snapshot.world_height - visible_height)
+        camera_left = max(0.0, min(max_left, camera_left))
+        camera_top = max(0.0, min(max_top, camera_top))
+
+        return pg.Rect(
+            int(camera_left),
+            int(camera_top),
+            int(visible_width),
+            int(visible_height),
+        )
+
+    def _local_player(self) -> dict | None:
+        for player in self.snapshot.players or []:
+            if player["id"] == self.player_id:
+                return player
+        return None
 
     def _draw_match_overlay(
         self,
