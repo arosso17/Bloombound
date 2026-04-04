@@ -24,6 +24,7 @@ class PlayerState:
     restoration_eggs: int = 0
     radius: int = 16
     hazard_slow_multiplier: float = 1.0
+    last_input_seq: int = 0
     input_state: PlayerInput = field(default_factory=PlayerInput)
     prev_input_state: PlayerInput = field(default_factory=PlayerInput)
 

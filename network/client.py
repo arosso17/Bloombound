@@ -15,7 +15,7 @@ from gameplay.map_types import MapDefinition
 from gameplay.state import ALIVE_SPEED, PLAYER_COLORS, SPIRIT_SPEED
 from gameplay.visual_assets import load_visual_asset, render_visual_asset
 from network.diagnostics import ClientDiagnostics
-from network.shared import read_messages_forever, safe_close, send_message
+from network.shared import decode_message, encode_message, read_messages_forever, safe_close, send_message
 
 
 WINDOW_WIDTH = 1000
@@ -73,7 +73,9 @@ class NetworkClient:
         self.port = port
         self.name = name
         self.sock: socket.socket | None = None
+        self.udp_sock: socket.socket | None = None
         self.send_lock = threading.Lock()
+        self.udp_send_lock = threading.Lock()
         self.stop_event = threading.Event()
         self.incoming: queue.Queue[dict] = queue.Queue()
 
@@ -81,18 +83,33 @@ class NetworkClient:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.sock.connect((self.host, self.port))
+        self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_sock.bind(("", 0))
+        self.udp_sock.settimeout(0.5)
         threading.Thread(target=self._reader_loop, daemon=True).start()
+        threading.Thread(target=self._udp_reader_loop, daemon=True).start()
         self.send({"type": "join", "name": self.name})
 
     def close(self) -> None:
         self.stop_event.set()
         safe_close(self.sock)
+        safe_close(self.udp_sock)
 
     def send(self, message: dict) -> None:
         if self.sock is None:
             return
         with self.send_lock:
             send_message(self.sock, message)
+
+    def send_udp(self, message: dict) -> bool:
+        if self.udp_sock is None:
+            return False
+        try:
+            with self.udp_send_lock:
+                self.udp_sock.sendto(encode_message(message), (self.host, self.port))
+            return True
+        except OSError:
+            return False
 
     def poll_messages(self) -> list[dict]:
         messages = []
@@ -111,6 +128,21 @@ class NetworkClient:
             on_message=self.incoming.put,
             on_disconnect=lambda: self.incoming.put({"type": "disconnected"}),
         )
+
+    def _udp_reader_loop(self) -> None:
+        assert self.udp_sock is not None
+        try:
+            while not self.stop_event.is_set():
+                try:
+                    data, _ = self.udp_sock.recvfrom(65536)
+                except socket.timeout:
+                    continue
+                message = decode_message(data)
+                if message is None:
+                    continue
+                self.incoming.put(message)
+        except OSError:
+            pass
 
 
 class EasterClientApp:
@@ -138,6 +170,9 @@ class EasterClientApp:
         self.ping_nonce = 0
         self.next_input_send_at = 0.0
         self.last_sent_input_state = (0.0, 0.0, False, False)
+        self.udp_ready = False
+        self.udp_nonce = 0
+        self.next_udp_hello_at = 0.0
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
             "egg": load_visual_asset("egg"),
@@ -181,6 +216,7 @@ class EasterClientApp:
             else:
                 self.current_move_x = 0.0
                 self.current_move_y = 0.0
+            self._maybe_send_udp_hello()
             self._maybe_send_ping()
             self._draw(screen, font, small_font)
             pg.display.flip()
@@ -204,6 +240,8 @@ class EasterClientApp:
                 self.snapshot.world_height = int(message["world"]["height"])
                 self.connected = True
                 self.connection_closed = False
+                self.udp_ready = False
+                self.next_udp_hello_at = 0.0
                 self.render_positions.clear()
                 self.local_predicted_player = None
                 self._send_profile_update()
@@ -218,8 +256,11 @@ class EasterClientApp:
                 self.local_predicted_player = None
                 self._sync_local_profile_from_lobby()
             elif message_type == "world_snapshot":
+                snapshot_tick = int(message.get("tick", 0))
+                if snapshot_tick < self.snapshot.tick:
+                    continue
                 self._load_map(str(message.get("map_id", "heart_garden_slice")))
-                self.snapshot.tick = int(message.get("tick", 0))
+                self.snapshot.tick = snapshot_tick
                 self.snapshot.match_phase = str(message.get("match_phase", "playing"))
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.eggs = list(message.get("eggs", []))
@@ -238,11 +279,15 @@ class EasterClientApp:
                         transport_seconds = None
                 self.diagnostics.record_world_snapshot(self.snapshot.tick, transport_seconds)
                 self._reconcile_render_state()
+            elif message_type == "udp_welcome":
+                if str(message.get("player_id", "")) == self.player_id:
+                    self.udp_ready = True
             elif message_type == "pong":
                 self._handle_pong(message)
             elif message_type == "disconnected":
                 self.connected = False
                 self.connection_closed = True
+                self.udp_ready = False
 
     def _handle_keydown(self, event: pg.event.Event) -> None:
         if not self.connected:
@@ -293,16 +338,20 @@ class EasterClientApp:
             return
         self.input_seq += 1
         self.diagnostics.record_input_sent()
-        self.network.send(
-            {
-                "type": "player_input",
-                "seq": self.input_seq,
-                "move_x": move_x,
-                "move_y": move_y,
-                "interact": interact,
-                "debug_down": debug_down,
-            }
-        )
+        payload = {
+            "type": "player_input",
+            "seq": self.input_seq,
+            "move_x": move_x,
+            "move_y": move_y,
+            "interact": interact,
+            "debug_down": debug_down,
+        }
+        if self.udp_ready:
+            sent = self.network.send_udp(payload)
+            if not sent:
+                self.network.send(payload)
+        else:
+            self.network.send(payload)
         self.last_sent_input_state = current_state
         self.next_input_send_at = now + INPUT_SEND_INTERVAL
 
@@ -851,6 +900,22 @@ class EasterClientApp:
         if replied_at >= received_at > 0.0:
             server_turnaround = replied_at - received_at
         self.diagnostics.record_rtt(now - client_sent_at, server_turnaround)
+
+    def _maybe_send_udp_hello(self) -> None:
+        if not self.connected or self.player_id == "" or self.udp_ready:
+            return
+        now = time.perf_counter()
+        if now < self.next_udp_hello_at:
+            return
+        self.udp_nonce += 1
+        self.network.send_udp(
+            {
+                "type": "udp_hello",
+                "player_id": self.player_id,
+                "nonce": self.udp_nonce,
+            }
+        )
+        self.next_udp_hello_at = now + 1.0
 
 
 def run_client(host: str, port: int, name: str, net_debug: bool = False) -> None:

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from gameplay.state import GameState
 from network.diagnostics import ServerDiagnostics
-from network.shared import encode_message, read_messages_forever, safe_close, send_message
+from network.shared import decode_message, encode_message, read_messages_forever, safe_close, send_message
 
 
 @dataclass
@@ -18,6 +18,7 @@ class ClientSession:
     sock: socket.socket
     address: tuple[str, int]
     name: str
+    udp_address: tuple[str, int] | None = None
     send_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
@@ -37,7 +38,9 @@ class GameServer:
         self.state = GameState(expected_players=expected_players, map_id=map_id)
         self.stop_event = threading.Event()
         self.server_socket: socket.socket | None = None
+        self.udp_socket: socket.socket | None = None
         self.accept_thread: threading.Thread | None = None
+        self.udp_thread: threading.Thread | None = None
         self.loop_thread: threading.Thread | None = None
         self.message_queue: queue.Queue[tuple[str, dict, float]] = queue.Queue()
         self.disconnect_queue: queue.Queue[str] = queue.Queue()
@@ -51,9 +54,15 @@ class GameServer:
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen()
         self.server_socket.settimeout(0.5)
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.udp_socket.bind((self.host, self.port))
+        self.udp_socket.settimeout(0.5)
         self.accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
+        self.udp_thread = threading.Thread(target=self._udp_loop, daemon=True)
         self.loop_thread = threading.Thread(target=self._run_loop, daemon=True)
         self.accept_thread.start()
+        self.udp_thread.start()
         self.loop_thread.start()
 
     def run_forever(self) -> None:
@@ -72,6 +81,7 @@ class GameServer:
             return
         self.stop_event.set()
         safe_close(self.server_socket)
+        safe_close(self.udp_socket)
         with self.sessions_lock:
             sessions = list(self.sessions.values())
             self.sessions.clear()
@@ -79,6 +89,8 @@ class GameServer:
             safe_close(session.sock)
         if self.accept_thread:
             self.accept_thread.join(timeout=1.0)
+        if self.udp_thread:
+            self.udp_thread.join(timeout=1.0)
         if self.loop_thread:
             self.loop_thread.join(timeout=1.0)
 
@@ -106,6 +118,7 @@ class GameServer:
                     "player_id": player_id,
                     "map_id": self.state.map_id,
                     "tick_rate": self.tick_rate,
+                    "udp_port": self.port,
                     "match_phase": self.state.match_phase,
                     "world": self.state.build_snapshot()["world"],
                 },
@@ -124,6 +137,40 @@ class GameServer:
             on_message=lambda message: self.message_queue.put((session.player_id, message, time.perf_counter())),
             on_disconnect=lambda: self.disconnect_queue.put(session.player_id),
         )
+
+    def _udp_loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                assert self.udp_socket is not None
+                data, address = self.udp_socket.recvfrom(65536)
+            except (socket.timeout, OSError):
+                continue
+            message = decode_message(data)
+            if not message:
+                continue
+            received_at = time.perf_counter()
+            message_type = str(message.get("type", "unknown"))
+            if message_type == "udp_hello":
+                player_id = str(message.get("player_id", ""))
+                session = self._get_session(player_id)
+                if session is None:
+                    continue
+                with self.sessions_lock:
+                    session.udp_address = address
+                self._send_udp(
+                    address,
+                    {
+                        "type": "udp_welcome",
+                        "player_id": player_id,
+                        "nonce": message.get("nonce"),
+                    },
+                )
+                continue
+
+            session = self._get_session_by_udp_address(address)
+            if session is None:
+                continue
+            self.message_queue.put((session.player_id, message, received_at))
 
     def _run_loop(self) -> None:
         tick_duration = 1.0 / self.tick_rate
@@ -198,7 +245,8 @@ class GameServer:
                     self._send_to_session(session, pong)
 
     def _broadcast(self, message: dict) -> None:
-        if message.get("type") == "world_snapshot":
+        is_world_snapshot = message.get("type") == "world_snapshot"
+        if is_world_snapshot:
             message = dict(message)
             message["server_sent_at"] = time.time()
         with self.sessions_lock:
@@ -207,7 +255,11 @@ class GameServer:
         self.diagnostics.record_broadcast(str(message.get("type", "unknown")), payload_size, len(sessions))
         stale_ids = []
         for session in sessions:
-            if not self._send_to_session(session, message):
+            if is_world_snapshot and session.udp_address is not None:
+                sent = self._send_udp(session.udp_address, message)
+            else:
+                sent = self._send_to_session(session, message)
+            if not sent:
                 stale_ids.append(session.player_id)
         for player_id in stale_ids:
             self.disconnect_queue.put(player_id)
@@ -215,6 +267,22 @@ class GameServer:
     def _get_session(self, player_id: str) -> ClientSession | None:
         with self.sessions_lock:
             return self.sessions.get(player_id)
+
+    def _get_session_by_udp_address(self, address: tuple[str, int]) -> ClientSession | None:
+        with self.sessions_lock:
+            for session in self.sessions.values():
+                if session.udp_address == address:
+                    return session
+        return None
+
+    def _send_udp(self, address: tuple[str, int], message: dict) -> bool:
+        if self.udp_socket is None:
+            return False
+        try:
+            self.udp_socket.sendto(encode_message(message), address)
+            return True
+        except OSError:
+            return False
 
     def _send_to_session(self, session: ClientSession, message: dict) -> bool:
         try:

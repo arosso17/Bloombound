@@ -15,6 +15,19 @@ def encode_message(message: dict) -> bytes:
     return (json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8")
 
 
+def decode_message(data: bytes) -> dict | None:
+    try:
+        raw = data.decode("utf-8").strip()
+    except UnicodeDecodeError:
+        return None
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+
 def send_message(sock: socket.socket, message: dict) -> None:
     sock.sendall(encode_message(message))
 

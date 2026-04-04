@@ -125,6 +125,7 @@ class GameState:
             player.revival_eggs = 0
             player.restoration_eggs = 0
             player.hazard_slow_multiplier = DEFAULT_HAZARD_SLOW_MULTIPLIER
+            player.last_input_seq = 0
             player.input_state = PlayerInput()
             player.prev_input_state = PlayerInput()
         return True
@@ -159,12 +160,16 @@ class GameState:
         player = self.players.get(player_id)
         if not player or self.match_phase != "playing":
             return
+        seq = int(payload.get("seq", 0))
+        if seq < player.last_input_seq:
+            return
+        player.last_input_seq = seq
         player.input_state = PlayerInput(
             move_x=float(payload.get("move_x", 0.0)),
             move_y=float(payload.get("move_y", 0.0)),
             interact=bool(payload.get("interact", False)),
             debug_down=bool(payload.get("debug_down", False)),
-            seq=int(payload.get("seq", 0)),
+            seq=seq,
         )
 
     def update(self, dt: float) -> None:
