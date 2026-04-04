@@ -270,6 +270,7 @@ class GameState:
         alive_targets = [player for player in self.players.values() if player.state == "alive"]
         if not self.enemies:
             return
+        enemy_blocked_cells = self._restored_zone_blocked_cells()
 
         for enemy in self.enemies:
             goal_x, goal_y, target = self._enemy_goal(enemy, alive_targets)
@@ -282,7 +283,7 @@ class GameState:
                 self.enemy_paths[enemy.enemy_id] = []
                 self.enemy_path_targets.pop(enemy.enemy_id, None)
 
-            path = self._path_for_enemy(enemy, goal_x, goal_y)
+            path = self._path_for_enemy(enemy, goal_x, goal_y, enemy_blocked_cells)
             waypoint_x, waypoint_y = self._enemy_waypoint(enemy, goal_x, goal_y, path)
             delta_x = waypoint_x - enemy.x
             delta_y = waypoint_y - enemy.y
@@ -299,6 +300,7 @@ class GameState:
                     world_height=self.map.world_height,
                     collision_rects=self.map.collision_rects,
                 )
+                enemy.x, enemy.y = self._keep_enemy_out_of_restored_zones(enemy.x, enemy.y, enemy.radius)
 
             if target is None:
                 continue
@@ -312,11 +314,21 @@ class GameState:
         enemy: EnemyState,
         alive_targets: list[PlayerState],
     ) -> tuple[float, float, PlayerState | None]:
+        restored_zone = self._restored_zone_at(enemy.x, enemy.y, enemy.radius)
+        if restored_zone is not None:
+            enemy.state = "return"
+            enemy.target_player_id = ""
+            exit_x, exit_y = self._nearest_restored_zone_exit(restored_zone, enemy.x, enemy.y, enemy.radius)
+            enemy.last_known_x = exit_x
+            enemy.last_known_y = exit_y
+            return exit_x, exit_y, None
+
         visible_targets = [
             player
             for player in alive_targets
             if distance(player.x, player.y, enemy.x, enemy.y) <= enemy.aggro_radius
             and distance(player.x, player.y, enemy.home_x, enemy.home_y) <= enemy.leash_radius
+            and self._restored_zone_at(player.x, player.y, player.radius) is None
         ]
         if visible_targets:
             target = min(
@@ -348,7 +360,13 @@ class GameState:
         enemy.state = "return"
         return enemy.home_x, enemy.home_y, None
 
-    def _path_for_enemy(self, enemy: EnemyState, goal_x: float, goal_y: float) -> list[tuple[int, int]]:
+    def _path_for_enemy(
+        self,
+        enemy: EnemyState,
+        goal_x: float,
+        goal_y: float,
+        extra_blocked: set[tuple[int, int]],
+    ) -> list[tuple[int, int]]:
         start_cell = self.nav_grid.point_to_cell(enemy.x, enemy.y)
         target_cell = self.nav_grid.point_to_cell(goal_x, goal_y)
         cached_target = self.enemy_path_targets.get(enemy.enemy_id)
@@ -358,7 +376,7 @@ class GameState:
             or self.tick % ENEMY_PATH_RECALC_TICKS == 0
         )
         if should_recompute:
-            self.enemy_paths[enemy.enemy_id] = find_path(self.nav_grid, start_cell, target_cell)
+            self.enemy_paths[enemy.enemy_id] = find_path(self.nav_grid, start_cell, target_cell, extra_blocked=extra_blocked)
             self.enemy_path_targets[enemy.enemy_id] = target_cell
 
         path = self.enemy_paths.get(enemy.enemy_id, [])
@@ -368,7 +386,7 @@ class GameState:
         if start_cell in path:
             path = path[path.index(start_cell) :]
         elif path[0] != start_cell:
-            path = find_path(self.nav_grid, start_cell, target_cell)
+            path = find_path(self.nav_grid, start_cell, target_cell, extra_blocked=extra_blocked)
             self.enemy_path_targets[enemy.enemy_id] = target_cell
 
         self.enemy_paths[enemy.enemy_id] = path
@@ -607,6 +625,58 @@ class GameState:
             if distance(x, y, hazard.x, hazard.y) <= hazard.radius:
                 multiplier = min(multiplier, hazard.slow_multiplier)
         return multiplier
+
+    def _restored_zone_at(self, x: float, y: float, radius: float = 0.0) -> RestorationZoneState | None:
+        for zone in self.restoration_zones:
+            if not zone.restored:
+                continue
+            if distance(x, y, zone.x, zone.y) <= zone.radius + radius:
+                return zone
+        return None
+
+    def _nearest_restored_zone_exit(
+        self,
+        zone: RestorationZoneState,
+        x: float,
+        y: float,
+        radius: float,
+    ) -> tuple[float, float]:
+        delta_x = x - zone.x
+        delta_y = y - zone.y
+        magnitude = math.hypot(delta_x, delta_y)
+        if magnitude < 0.001:
+            delta_x = 1.0
+            delta_y = 0.0
+            magnitude = 1.0
+        clearance = zone.radius + radius + 10.0
+        exit_x = zone.x + (delta_x / magnitude) * clearance
+        exit_y = zone.y + (delta_y / magnitude) * clearance
+        return (
+            max(radius, min(self.map.world_width - radius, exit_x)),
+            max(radius, min(self.map.world_height - radius, exit_y)),
+        )
+
+    def _keep_enemy_out_of_restored_zones(self, x: float, y: float, radius: float) -> tuple[float, float]:
+        zone = self._restored_zone_at(x, y, radius)
+        if zone is None:
+            return x, y
+        return self._nearest_restored_zone_exit(zone, x, y, radius)
+
+    def _restored_zone_blocked_cells(self) -> set[tuple[int, int]]:
+        blocked: set[tuple[int, int]] = set()
+        for zone in self.restoration_zones:
+            if not zone.restored:
+                continue
+            min_col = max(0, int((zone.x - zone.radius) // self.nav_grid.cell_size) - 1)
+            max_col = min(self.nav_grid.cols - 1, int((zone.x + zone.radius) // self.nav_grid.cell_size) + 1)
+            min_row = max(0, int((zone.y - zone.radius) // self.nav_grid.cell_size) - 1)
+            max_row = min(self.nav_grid.rows - 1, int((zone.y + zone.radius) // self.nav_grid.cell_size) + 1)
+            for col in range(min_col, max_col + 1):
+                for row in range(min_row, max_row + 1):
+                    center_x, center_y = self.nav_grid.cell_center((col, row))
+                    if distance(center_x, center_y, zone.x, zone.y) <= zone.radius:
+                        blocked.add((col, row))
+        return blocked
 
     def _objective_text(self) -> str:
         if self.match_phase == "won":
