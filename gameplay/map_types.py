@@ -44,6 +44,7 @@ class EnemySpawnDef:
     radius: int = 18
     speed: float = 150.0
     damage_per_second: float = 40.0
+    leash_radius: float = 260.0
 
 
 @dataclass(frozen=True)

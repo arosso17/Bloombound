@@ -54,6 +54,7 @@ class MapEditor:
             "revive_radius": tk.StringVar(value=""),
             "speed": tk.StringVar(value=""),
             "damage_per_second": tk.StringVar(value=""),
+            "leash_radius": tk.StringVar(value=""),
             "egg_type": tk.StringVar(value=""),
         }
 
@@ -177,6 +178,7 @@ class MapEditor:
             ("revive_radius", "Revive Radius"),
             ("speed", "Speed"),
             ("damage_per_second", "Damage / Sec"),
+            ("leash_radius", "Leash Radius"),
             ("egg_type", "Egg Type"),
         ]
         base_row = 8
@@ -294,6 +296,7 @@ class MapEditor:
                 obj["radius"] = max(1.0, self._parse_float_var("radius"))
                 obj["speed"] = max(1.0, self._parse_float_var("speed"))
                 obj["damage_per_second"] = max(0.0, self._parse_float_var("damage_per_second"))
+                obj["leash_radius"] = max(8.0, self._parse_float_var("leash_radius"))
             elif section == "shrine":
                 obj["shrine_id"] = self.property_vars["id"].get().strip() or obj["shrine_id"]
                 obj["interact_radius"] = max(1.0, self._parse_float_var("interact_radius"))
@@ -506,6 +509,7 @@ class MapEditor:
         self._set_property("revive_radius", obj.get("revive_radius", ""))
         self._set_property("speed", obj.get("speed", ""))
         self._set_property("damage_per_second", obj.get("damage_per_second", ""))
+        self._set_property("leash_radius", obj.get("leash_radius", 260.0 if section == "enemy_spawns" else ""))
         self._set_property("egg_type", obj.get("egg_type", ""))
 
         if section == "collision_rects":
@@ -600,6 +604,16 @@ class MapEditor:
         interact_radius = float(obj.get("interact_radius", obj.get("revive_radius", 0))) * self.preview_scale
         if interact_radius > 0:
             self.canvas.create_oval(x - interact_radius, y - interact_radius, x + interact_radius, y + interact_radius, outline=fill, dash=(4, 4))
+        leash_radius = float(obj.get("leash_radius", 260.0 if label == "B" else 0)) * self.preview_scale
+        if leash_radius > 0:
+            self.canvas.create_oval(
+                x - leash_radius,
+                y - leash_radius,
+                x + leash_radius,
+                y + leash_radius,
+                outline="#8f5f2d",
+                dash=(2, 6),
+            )
         self.canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill, outline="#203040", width=2)
         self.canvas.create_text(x, y - radius - 10, text=label, fill="#203040")
 
@@ -758,6 +772,7 @@ class MapEditor:
                     "radius": 18,
                     "speed": 150.0,
                     "damage_per_second": 40.0,
+                    "leash_radius": 260.0,
                 }
             )
             self._select_object_ref(("enemy_spawns", len(self.map_data["enemy_spawns"]) - 1))

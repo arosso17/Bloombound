@@ -13,6 +13,7 @@ SPIRIT_SPEED = 280.0
 NAV_CELL_SIZE = 40
 ENEMY_PATH_RECALC_TICKS = 8
 ENEMY_WAYPOINT_REACHED_DISTANCE = 10.0
+ENEMY_HOME_IDLE_DISTANCE = 8.0
 PLAYER_COLORS = [
     (242, 119, 119),
     (112, 193, 179),
@@ -257,16 +258,18 @@ class GameState:
 
     def _update_enemies(self, dt: float) -> None:
         alive_targets = [player for player in self.players.values() if player.state == "alive"]
-        if not alive_targets or not self.enemies:
+        if not self.enemies:
             return
 
         for enemy in self.enemies:
-            target = min(
-                alive_targets,
-                key=lambda player: distance(player.x, player.y, enemy.x, enemy.y),
-            )
-            path = self._path_for_enemy(enemy, target)
-            waypoint_x, waypoint_y = self._enemy_waypoint(enemy, target, path)
+            goal_x, goal_y, target = self._enemy_goal(enemy, alive_targets)
+            if target is None and distance(enemy.x, enemy.y, enemy.home_x, enemy.home_y) <= ENEMY_HOME_IDLE_DISTANCE:
+                self.enemy_paths[enemy.enemy_id] = []
+                self.enemy_path_targets.pop(enemy.enemy_id, None)
+                continue
+
+            path = self._path_for_enemy(enemy, goal_x, goal_y)
+            waypoint_x, waypoint_y = self._enemy_waypoint(enemy, goal_x, goal_y, path)
             delta_x = waypoint_x - enemy.x
             delta_y = waypoint_y - enemy.y
             magnitude = math.hypot(delta_x, delta_y)
@@ -283,14 +286,34 @@ class GameState:
                     collision_rects=self.map.collision_rects,
                 )
 
+            if target is None:
+                continue
             if distance(target.x, target.y, enemy.x, enemy.y) <= target.radius + enemy.radius:
                 target.health = max(0, int(target.health - enemy.damage_per_second * dt))
                 if target.health <= 0:
                     self._set_player_spirit(target)
 
-    def _path_for_enemy(self, enemy: EnemyState, target: PlayerState) -> list[tuple[int, int]]:
+    def _enemy_goal(
+        self,
+        enemy: EnemyState,
+        alive_targets: list[PlayerState],
+    ) -> tuple[float, float, PlayerState | None]:
+        in_range_targets = [
+            player
+            for player in alive_targets
+            if distance(player.x, player.y, enemy.home_x, enemy.home_y) <= enemy.leash_radius
+        ]
+        if in_range_targets:
+            target = min(
+                in_range_targets,
+                key=lambda player: distance(player.x, player.y, enemy.x, enemy.y),
+            )
+            return target.x, target.y, target
+        return enemy.home_x, enemy.home_y, None
+
+    def _path_for_enemy(self, enemy: EnemyState, goal_x: float, goal_y: float) -> list[tuple[int, int]]:
         start_cell = self.nav_grid.point_to_cell(enemy.x, enemy.y)
-        target_cell = self.nav_grid.point_to_cell(target.x, target.y)
+        target_cell = self.nav_grid.point_to_cell(goal_x, goal_y)
         cached_target = self.enemy_path_targets.get(enemy.enemy_id)
         should_recompute = (
             enemy.enemy_id not in self.enemy_paths
@@ -317,11 +340,12 @@ class GameState:
     def _enemy_waypoint(
         self,
         enemy: EnemyState,
-        target: PlayerState,
+        goal_x: float,
+        goal_y: float,
         path: list[tuple[int, int]],
     ) -> tuple[float, float]:
         if not path:
-            return target.x, target.y
+            return goal_x, goal_y
 
         current_cell = self.nav_grid.point_to_cell(enemy.x, enemy.y)
         remaining_path = path
@@ -336,7 +360,7 @@ class GameState:
 
         self.enemy_paths[enemy.enemy_id] = remaining_path
         if not remaining_path:
-            return target.x, target.y
+            return goal_x, goal_y
 
         waypoint_cell = remaining_path[0]
         waypoint_x, waypoint_y = self.nav_grid.cell_center(waypoint_cell)
@@ -369,9 +393,12 @@ class GameState:
                 spawn.enemy_id,
                 spawn.x,
                 spawn.y,
+                home_x=spawn.x,
+                home_y=spawn.y,
                 radius=spawn.radius,
                 speed=spawn.speed,
                 damage_per_second=spawn.damage_per_second,
+                leash_radius=spawn.leash_radius,
             )
             for spawn in self.map.enemy_spawns
         ]

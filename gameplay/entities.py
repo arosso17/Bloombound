@@ -83,9 +83,12 @@ class EnemyState:
     enemy_id: str
     x: float
     y: float
+    home_x: float
+    home_y: float
     radius: int = 18
     speed: float = 150.0
     damage_per_second: float = 40.0
+    leash_radius: float = 260.0
 
     def to_dict(self) -> dict:
         return {
