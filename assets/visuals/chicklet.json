@@ -141,6 +141,42 @@
         64
       ],
       "outline_width": 1
+    },
+    {
+      "kind": "line",
+      "x": 26.65,
+      "y": 26.74,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 12.0,
+      "x2": 26.82,
+      "y2": 31.32,
+      "fill": null,
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "line",
+      "x": 30.13,
+      "y": 27.23,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 12.0,
+      "x2": 27.35,
+      "y2": 30.97,
+      "fill": null,
+      "outline": [
+        48,
+        58,
+        64
+      ],
+      "outline_width": 1
     }
   ]
 }

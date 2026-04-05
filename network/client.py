@@ -356,7 +356,7 @@ class EasterClientApp:
             self.show_full_hud = not self.show_full_hud
             return screen
         if self.snapshot.match_phase in {"won", "lost"}:
-            if event.key == pg.K_RETURN and self.is_host and self.can_start:
+            if event.key == pg.K_RETURN and self.is_host:
                 self.network.send({"type": "start_game"})
             return screen
         if self.snapshot.match_phase != "lobby":
