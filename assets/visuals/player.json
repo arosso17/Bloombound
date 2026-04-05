@@ -54,7 +54,7 @@
     {
       "kind": "ellipse",
       "x": 25.34,
-      "y": 46.37,
+      "y": 45.12,
       "color_key": "player_head",
       "rotation_degrees": -89.53,
       "width": 6.57,
@@ -76,8 +76,8 @@
     },
     {
       "kind": "ellipse",
-      "x": 39.18,
-      "y": 46.39,
+      "x": 38.64,
+      "y": 45.31,
       "color_key": "player_head",
       "rotation_degrees": -89.53,
       "width": 6.57,
