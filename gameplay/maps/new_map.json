@@ -409,18 +409,46 @@
   ],
   "decorations": [
     {
-      "decoration_id": "flower_hub_1",
-      "asset_id": "dead_flower",
+      "decoration_id": "hub_bush_1",
+      "asset_id": "dead_bush",
       "x": 234.0,
       "y": 426.0,
-      "scale": 0.56
+      "scale": 1.44
     },
     {
-      "decoration_id": "flower_hub_2",
-      "asset_id": "dead_flower",
+      "decoration_id": "hub_tulip_1",
+      "asset_id": "dead_tulip",
       "x": 520.0,
       "y": 296.0,
-      "scale": 0.52
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "grove_bush_1",
+      "asset_id": "dead_bush",
+      "x": 334.0,
+      "y": 1128.0,
+      "scale": 1.48
+    },
+    {
+      "decoration_id": "grove_reeds_1",
+      "asset_id": "dead_reeds",
+      "x": 602.0,
+      "y": 1136.0,
+      "scale": 0.74
+    },
+    {
+      "decoration_id": "grove_reeds_2",
+      "asset_id": "dead_reeds",
+      "x": 336.0,
+      "y": 1540.0,
+      "scale": 0.72
+    },
+    {
+      "decoration_id": "grove_tulip_1",
+      "asset_id": "dead_tulip",
+      "x": 600.0,
+      "y": 1574.0,
+      "scale": 0.7
     },
     {
       "decoration_id": "flower_orchard_1",
@@ -442,9 +470,49 @@
       "decoration_id": "flower_orchard_3",
       "asset_id": "dead_flower",
       "restored_by_zone_id": "restore_orchard",
-      "x": 890.0,
-      "y": 672.0,
+      "x": 858.0,
+      "y": 640.0,
       "scale": 0.58
+    },
+    {
+      "decoration_id": "orchard_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 868.0,
+      "y": 352.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "orchard_tulip_2",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1172.0,
+      "y": 392.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "orchard_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1132.0,
+      "y": 540.0,
+      "scale": 1.48
+    },
+    {
+      "decoration_id": "orchard_bush_2",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 906.0,
+      "y": 710.0,
+      "scale": 1.36
+    },
+    {
+      "decoration_id": "orchard_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1226.0,
+      "y": 710.0,
+      "scale": 0.74
     },
     {
       "decoration_id": "flower_glass_1",
@@ -469,6 +537,46 @@
       "x": 1768.0,
       "y": 872.0,
       "scale": 0.6
+    },
+    {
+      "decoration_id": "glass_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1566.0,
+      "y": 334.0,
+      "scale": 1.4
+    },
+    {
+      "decoration_id": "glass_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1898.0,
+      "y": 334.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "glass_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1546.0,
+      "y": 828.0,
+      "scale": 0.76
+    },
+    {
+      "decoration_id": "glass_reeds_2",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1928.0,
+      "y": 876.0,
+      "scale": 0.78
+    },
+    {
+      "decoration_id": "glass_reeds_3",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1694.0,
+      "y": 918.0,
+      "scale": 0.7
     },
     {
       "decoration_id": "flower_south_1",
@@ -503,6 +611,94 @@
       "scale": 0.7
     },
     {
+      "decoration_id": "south_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1032.0,
+      "y": 1368.0,
+      "scale": 1.44
+    },
+    {
+      "decoration_id": "south_bush_2",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1498.0,
+      "y": 1706.0,
+      "scale": 1.4
+    },
+    {
+      "decoration_id": "south_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1042.0,
+      "y": 1880.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "south_tulip_2",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1518.0,
+      "y": 1410.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "south_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1004.0,
+      "y": 1456.0,
+      "scale": 0.84
+    },
+    {
+      "decoration_id": "south_reeds_2",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1170.0,
+      "y": 1430.0,
+      "scale": 0.78
+    },
+    {
+      "decoration_id": "south_reeds_3",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1456.0,
+      "y": 1428.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "south_reeds_4",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1118.0,
+      "y": 1650.0,
+      "scale": 0.86
+    },
+    {
+      "decoration_id": "south_reeds_5",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1386.0,
+      "y": 1648.0,
+      "scale": 0.86
+    },
+    {
+      "decoration_id": "south_reeds_6",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1012.0,
+      "y": 1886.0,
+      "scale": 0.8
+    },
+    {
+      "decoration_id": "south_reeds_7",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1492.0,
+      "y": 1888.0,
+      "scale": 0.82
+    },
+    {
       "decoration_id": "flower_heart_1",
       "asset_id": "dead_flower",
       "restored_by_zone_id": "restore_south_garden",
@@ -517,6 +713,62 @@
       "x": 2058.0,
       "y": 1988.0,
       "scale": 0.62
+    },
+    {
+      "decoration_id": "heart_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1998.0,
+      "y": 1898.0,
+      "scale": 1.48
+    },
+    {
+      "decoration_id": "heart_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1840.0,
+      "y": 2060.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "heart_reeds_2",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 2140.0,
+      "y": 2064.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "heart_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1986.0,
+      "y": 2120.0,
+      "scale": 0.64
+    },
+    {
+      "decoration_id": "decoration_1",
+      "asset_id": "grass_sprout",
+      "restored_by_zone_id": "",
+      "x": 464,
+      "y": 704,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "decoration_2",
+      "asset_id": "grass_sprout",
+      "restored_by_zone_id": "",
+      "x": 240,
+      "y": 640,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "decoration_3",
+      "asset_id": "grass_sprout",
+      "restored_by_zone_id": "",
+      "x": 544,
+      "y": 480,
+      "scale": 1.0
     }
   ],
   "patrol_points": [

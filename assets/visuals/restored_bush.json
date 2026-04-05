@@ -1,0 +1,286 @@
+{
+  "asset_id": "restored_bush",
+  "canvas": {
+    "width": 120,
+    "height": 96
+  },
+  "shapes": [
+    {
+      "kind": "rect",
+      "x": 58.85,
+      "y": 58.18,
+      "width": 6.24,
+      "height": 16.82,
+      "fill": [
+        114,
+        93,
+        69
+      ],
+      "outline": [
+        73,
+        61,
+        49
+      ],
+      "outline_width": 2,
+      "rotation_degrees": 41.67
+    },
+    {
+      "kind": "rect",
+      "x": 48.92,
+      "y": 58.58,
+      "width": 6.24,
+      "height": 16.82,
+      "fill": [
+        114,
+        93,
+        69
+      ],
+      "outline": [
+        73,
+        61,
+        49
+      ],
+      "outline_width": 2,
+      "rotation_degrees": -37.23
+    },
+    {
+      "kind": "rect",
+      "x": 52.67,
+      "y": 59.88,
+      "width": 10.86,
+      "height": 17.68,
+      "fill": [
+        114,
+        93,
+        69
+      ],
+      "outline": [
+        73,
+        61,
+        49
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 16,
+      "y": 34,
+      "width": 34,
+      "height": 28,
+      "fill": [
+        120,
+        176,
+        107
+      ],
+      "outline": [
+        62,
+        100,
+        61
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 36,
+      "y": 22,
+      "width": 42,
+      "height": 32,
+      "fill": [
+        144,
+        204,
+        126
+      ],
+      "outline": [
+        62,
+        100,
+        61
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 64.21,
+      "y": 26.45,
+      "width": 36,
+      "height": 30,
+      "fill": [
+        112,
+        164,
+        96
+      ],
+      "outline": [
+        62,
+        100,
+        61
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 33,
+      "y": 44,
+      "width": 44,
+      "height": 22,
+      "fill": [
+        93,
+        142,
+        83
+      ],
+      "outline": [
+        62,
+        100,
+        61
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 72.62,
+      "y": 43.22,
+      "width": 24,
+      "height": 22,
+      "fill": [
+        161,
+        217,
+        143
+      ],
+      "outline": [
+        62,
+        100,
+        61
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 42,
+      "y": 26,
+      "width": 18,
+      "height": 12,
+      "fill": [
+        172,
+        227,
+        154
+      ]
+    },
+    {
+      "kind": "circle",
+      "x": 26.97,
+      "y": 41.45,
+      "radius": 4,
+      "fill": [
+        255,
+        217,
+        101
+      ],
+      "outline": [
+        150,
+        126,
+        44
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 58.46,
+      "y": 27.45,
+      "radius": 4,
+      "fill": [
+        238,
+        129,
+        176
+      ],
+      "outline": [
+        121,
+        78,
+        105
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 90.19,
+      "y": 52.14,
+      "radius": 4,
+      "fill": [
+        238,
+        129,
+        176
+      ],
+      "outline": [
+        121,
+        78,
+        105
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 88.69,
+      "y": 33.5,
+      "radius": 4,
+      "fill": [
+        255,
+        239,
+        121
+      ],
+      "outline": [
+        150,
+        126,
+        44
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 42.33,
+      "y": 55.83,
+      "radius": 4,
+      "fill": [
+        255,
+        239,
+        121
+      ],
+      "outline": [
+        150,
+        126,
+        44
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 61.37,
+      "y": 51.98,
+      "radius": 4,
+      "fill": [
+        255,
+        200,
+        127
+      ],
+      "outline": [
+        148,
+        96,
+        55
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 25.31,
+      "y": 51.21,
+      "radius": 4,
+      "fill": [
+        255,
+        200,
+        127
+      ],
+      "outline": [
+        148,
+        96,
+        55
+      ],
+      "outline_width": 2
+    }
+  ]
+}

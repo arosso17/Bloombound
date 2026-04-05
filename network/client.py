@@ -20,6 +20,8 @@ from network.shared import decode_message, encode_message, read_messages_forever
 
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 700
+MIN_WINDOW_WIDTH = 900
+MIN_WINDOW_HEIGHT = 640
 CAMERA_ZOOM = 1.0
 BACKGROUND_COLOR = (232, 228, 214)
 PLAYFIELD_COLOR = (205, 214, 188)
@@ -194,6 +196,8 @@ class EasterClientApp:
         self.udp_nonce = 0
         self.next_udp_hello_at = 0.0
         self.show_full_hud = False
+        self.fullscreen = False
+        self.windowed_size = (WINDOW_WIDTH, WINDOW_HEIGHT)
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
             "egg_revival": load_visual_asset("egg_revival"),
@@ -206,9 +210,31 @@ class EasterClientApp:
             "spirit_seed": load_visual_asset("spirit_seed"),
         }
 
+    def _apply_display_mode(self) -> pg.Surface:
+        if self.fullscreen:
+            return pg.display.set_mode((0, 0), pg.FULLSCREEN)
+        width = max(MIN_WINDOW_WIDTH, int(self.windowed_size[0]))
+        height = max(MIN_WINDOW_HEIGHT, int(self.windowed_size[1]))
+        self.windowed_size = (width, height)
+        return pg.display.set_mode(self.windowed_size, pg.RESIZABLE)
+
+    def _toggle_fullscreen(self) -> pg.Surface:
+        if self.fullscreen:
+            self.fullscreen = False
+        else:
+            current_surface = pg.display.get_surface()
+            if current_surface is not None:
+                current_size = current_surface.get_size()
+                self.windowed_size = (
+                    max(MIN_WINDOW_WIDTH, current_size[0]),
+                    max(MIN_WINDOW_HEIGHT, current_size[1]),
+                )
+            self.fullscreen = True
+        return self._apply_display_mode()
+
     def run(self) -> None:
         pg.init()
-        screen = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        screen = self._apply_display_mode()
         pg.display.set_caption("Bloombound Prototype Client")
         clock = pg.time.Clock()
         font = pg.font.SysFont(None, 24)
@@ -228,8 +254,13 @@ class EasterClientApp:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
+                elif event.type == pg.VIDEORESIZE and not self.fullscreen:
+                    resized_width = max(MIN_WINDOW_WIDTH, int(event.w))
+                    resized_height = max(MIN_WINDOW_HEIGHT, int(event.h))
+                    self.windowed_size = (resized_width, resized_height)
+                    screen = self._apply_display_mode()
                 elif event.type == pg.KEYDOWN:
-                    self._handle_keydown(event)
+                    screen = self._handle_keydown(event, screen)
             self._handle_network_messages()
             if self.snapshot.match_phase == "playing":
                 keys = pg.key.get_pressed()
@@ -314,37 +345,42 @@ class EasterClientApp:
                 self.connection_closed = True
                 self.udp_ready = False
 
-    def _handle_keydown(self, event: pg.event.Event) -> None:
+    def _handle_keydown(self, event: pg.event.Event, screen: pg.Surface) -> pg.Surface:
         if not self.connected:
-            return
+            if event.key == pg.K_F11:
+                return self._toggle_fullscreen()
+            return screen
+        if event.key == pg.K_F11:
+            return self._toggle_fullscreen()
         if event.key == pg.K_TAB and self.snapshot.match_phase != "lobby":
             self.show_full_hud = not self.show_full_hud
-            return
+            return screen
         if self.snapshot.match_phase in {"won", "lost"}:
             if event.key == pg.K_RETURN and self.is_host and self.can_start:
                 self.network.send({"type": "start_game"})
-            return
+            return screen
         if self.snapshot.match_phase != "lobby":
-            return
+            return screen
         if event.key == pg.K_BACKSPACE:
             self.name_input = self.name_input[:-1]
             self._send_profile_update()
-            return
+            return screen
         if event.key == pg.K_LEFT:
             self.selected_color_index = (self.selected_color_index - 1) % len(PLAYER_COLORS)
             self._send_profile_update()
-            return
+            return screen
         if event.key == pg.K_RIGHT:
             self.selected_color_index = (self.selected_color_index + 1) % len(PLAYER_COLORS)
             self._send_profile_update()
-            return
+            return screen
         if event.key == pg.K_RETURN:
             if self.is_host and self.can_start:
                 self.network.send({"type": "start_game"})
-            return
+            return screen
         if event.unicode and event.unicode.isprintable() and len(self.name_input) < 24:
             self.name_input += event.unicode
             self._send_profile_update()
+        return screen
 
     def _send_input(self, keys: pg.key.ScancodeWrapper) -> None:
         if not self.connected:
@@ -506,8 +542,9 @@ class EasterClientApp:
             self._draw_lobby(screen, font, small_font)
             return
 
+        screen_rect = screen.get_rect()
         screen.fill(BACKGROUND_COLOR)
-        playfield_rect = pg.Rect(32, 96, WINDOW_WIDTH - 64, WINDOW_HEIGHT - 132)
+        playfield_rect = pg.Rect(32, 96, max(320, screen_rect.width - 64), max(220, screen_rect.height - 132))
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
         screen.set_clip(playfield_rect)
@@ -597,7 +634,7 @@ class EasterClientApp:
                 pg.draw.circle(screen, SPIRIT_COLOR, (px, py), radius + 2)
                 pg.draw.circle(screen, color, (px, py), radius, width=2)
             else:
-                player_scale = max(0.45, (display_player["radius"] * 2.25) / self.visual_assets["player"].width)
+                player_scale = max(0.9, (display_player["radius"] * 4.4) / self.visual_assets["player"].width)
                 render_visual_asset(
                     screen,
                     self.visual_assets["player"],
@@ -609,12 +646,13 @@ class EasterClientApp:
             if display_player["id"] == self.player_id:
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
             name_surf = small_font.render(display_player["name"], True, TEXT_COLOR)
-            screen.blit(name_surf, (px - name_surf.get_width() // 2, py - radius - 24))
+            name_y = py - ring_radius - name_surf.get_height() - 6
+            screen.blit(name_surf, (px - name_surf.get_width() // 2, name_y))
             if display_player["state"] == "alive":
                 bar_width = 42
                 bar_height = 6
                 health_ratio = max(0.0, min(1.0, display_player["health"] / max(1, display_player["max_health"])))
-                bar_rect = pg.Rect(px - bar_width // 2, py + radius + 10, bar_width, bar_height)
+                bar_rect = pg.Rect(px - bar_width // 2, py + ring_radius + 8, bar_width, bar_height)
                 pg.draw.rect(screen, HEALTH_BG_COLOR, bar_rect, border_radius=4)
                 pg.draw.rect(
                     screen,
@@ -635,7 +673,7 @@ class EasterClientApp:
         tick_text = small_font.render(f"Tick {self.snapshot.tick}", True, TEXT_COLOR)
         screen.blit(title, (32, 28))
         screen.blit(status, (32, 58))
-        screen.blit(tick_text, (WINDOW_WIDTH - 110, 28))
+        screen.blit(tick_text, (screen_rect.right - tick_text.get_width() - 32, 28))
         self._draw_compact_hud(screen, font, small_font)
         if self.show_full_hud:
             self._draw_details_overlay(screen, font, small_font, playfield_rect)
@@ -643,8 +681,9 @@ class EasterClientApp:
             self._draw_match_overlay(screen, font, small_font, playfield_rect)
 
     def _draw_lobby(self, screen: pg.Surface, font: pg.font.Font, small_font: pg.font.Font) -> None:
+        screen_rect = screen.get_rect()
         screen.fill(BACKGROUND_COLOR)
-        panel = pg.Rect(64, 72, WINDOW_WIDTH - 128, WINDOW_HEIGHT - 144)
+        panel = pg.Rect(64, 72, max(420, screen_rect.width - 128), max(360, screen_rect.height - 144))
         pg.draw.rect(screen, PLAYFIELD_COLOR, panel, border_radius=24)
 
         title = font.render("Bloombound Lobby", True, TEXT_COLOR)
@@ -923,7 +962,8 @@ class EasterClientApp:
         restoration_eggs = int(local_player.get("restoration_eggs", 0)) if local_player is not None else 0
         spirit_seeds = int(local_player.get("spirit_seeds", 0)) if local_player is not None else 0
 
-        hud_rect = pg.Rect(WINDOW_WIDTH - 194, 16, 162, 58)
+        screen_rect = screen.get_rect()
+        hud_rect = pg.Rect(screen_rect.right - 194, 16, 162, 58)
         pg.draw.rect(screen, HUD_PANEL_COLOR, hud_rect, border_radius=16)
         pg.draw.rect(screen, HUD_PANEL_ACCENT, hud_rect, width=2, border_radius=16)
         render_visual_asset(
@@ -956,7 +996,7 @@ class EasterClientApp:
         restoration_eggs = int(local_player.get("restoration_eggs", 0)) if local_player is not None else 0
         spirit_seeds = int(local_player.get("spirit_seeds", 0)) if local_player is not None else 0
 
-        overlay = pg.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pg.SRCALPHA)
+        overlay = pg.Surface(screen.get_size(), pg.SRCALPHA)
         overlay.fill((24, 28, 24, 110))
         screen.blit(overlay, (0, 0))
 

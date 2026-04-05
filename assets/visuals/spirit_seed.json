@@ -8,41 +8,50 @@
     {
       "kind": "circle",
       "x": 24,
-      "y": 28,
+      "y": 26,
       "radius": 15,
       "fill": [136, 185, 236, 80]
     },
     {
       "kind": "ellipse",
-      "x": 13,
-      "y": 10,
-      "width": 22,
-      "height": 28,
+      "x": 15,
+      "y": 9,
+      "width": 18,
+      "height": 22,
       "fill": [181, 226, 255],
       "outline": [78, 118, 168],
       "outline_width": 2
     },
     {
       "kind": "ellipse",
-      "x": 18,
-      "y": 16,
-      "width": 7,
-      "height": 11,
-      "fill": [244, 250, 255]
-    },
-    {
-      "kind": "circle",
-      "x": 24,
-      "y": 39,
-      "radius": 6,
-      "fill": [217, 245, 255],
+      "x": 19,
+      "y": 28,
+      "width": 10,
+      "height": 12,
+      "fill": [168, 220, 255],
       "outline": [78, 118, 168],
       "outline_width": 2
     },
     {
+      "kind": "ellipse",
+      "x": 21,
+      "y": 15,
+      "width": 5,
+      "height": 16,
+      "fill": [244, 250, 255]
+    },
+    {
+      "kind": "ellipse",
+      "x": 22,
+      "y": 21,
+      "width": 3,
+      "height": 14,
+      "fill": [206, 241, 255]
+    },
+    {
       "kind": "line",
       "x": 24,
-      "y": 44,
+      "y": 40,
       "x2": 24,
       "y2": 54,
       "outline": [118, 196, 166],

@@ -1,11 +1,83 @@
 {
   "asset_id": "heart_bloom_restored",
-  "canvas": { "width": 84, "height": 84 },
+  "canvas": {
+    "width": 84,
+    "height": 84
+  },
   "shapes": [
-    { "kind": "circle", "x": 42, "y": 42, "radius": 24, "fill": [255, 215, 126] },
-    { "kind": "circle", "x": 42, "y": 42, "radius": 30, "outline": [255, 248, 220], "outline_width": 4 },
-    { "kind": "ellipse", "x": 20, "y": 18, "width": 18, "height": 28, "fill": [255, 183, 203] },
-    { "kind": "ellipse", "x": 46, "y": 18, "width": 18, "height": 28, "fill": [255, 183, 203] },
-    { "kind": "ellipse", "x": 33, "y": 34, "width": 18, "height": 28, "fill": [255, 234, 155] }
+    {
+      "kind": "circle",
+      "x": 42,
+      "y": 42,
+      "radius": 24,
+      "fill": [255, 215, 126]
+    },
+    {
+      "kind": "circle",
+      "x": 42,
+      "y": 42,
+      "radius": 30,
+      "outline": [255, 248, 220],
+      "outline_width": 4
+    },
+    {
+      "kind": "ellipse",
+      "x": 18,
+      "y": 18,
+      "width": 19,
+      "height": 28,
+      "fill": [255, 183, 203],
+      "outline": [194, 126, 148],
+      "outline_width": 2,
+      "rotation_degrees": -12
+    },
+    {
+      "kind": "ellipse",
+      "x": 47,
+      "y": 18,
+      "width": 19,
+      "height": 28,
+      "fill": [255, 183, 203],
+      "outline": [194, 126, 148],
+      "outline_width": 2,
+      "rotation_degrees": 12
+    },
+    {
+      "kind": "ellipse",
+      "x": 33,
+      "y": 34,
+      "width": 18,
+      "height": 28,
+      "fill": [255, 234, 155],
+      "outline": [188, 156, 84],
+      "outline_width": 2
+    },
+    {
+      "kind": "line",
+      "x": 35,
+      "y": 39,
+      "x2": 31,
+      "y2": 52,
+      "outline": [198, 138, 153],
+      "outline_width": 2
+    },
+    {
+      "kind": "line",
+      "x": 49,
+      "y": 39,
+      "x2": 53,
+      "y2": 52,
+      "outline": [198, 138, 153],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 42,
+      "y": 43,
+      "radius": 7,
+      "fill": [255, 247, 202],
+      "outline": [177, 132, 63],
+      "outline_width": 2
+    }
   ]
 }

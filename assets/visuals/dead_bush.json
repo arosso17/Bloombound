@@ -1,0 +1,263 @@
+{
+  "asset_id": "dead_bush",
+  "canvas": {
+    "width": 120,
+    "height": 96
+  },
+  "shapes": [
+    {
+      "kind": "rect",
+      "x": 61.21,
+      "y": 55.94,
+      "width": 6.8,
+      "height": 16.87,
+      "fill": [
+        111,
+        91,
+        67
+      ],
+      "outline": [
+        73,
+        61,
+        49
+      ],
+      "outline_width": 2,
+      "rotation_degrees": 45.98
+    },
+    {
+      "kind": "rect",
+      "x": 48.87,
+      "y": 57.8,
+      "width": 9.38,
+      "height": 17.53,
+      "fill": [
+        111,
+        91,
+        67
+      ],
+      "outline": [
+        73,
+        61,
+        49
+      ],
+      "outline_width": 2,
+      "rotation_degrees": -33.04
+    },
+    {
+      "kind": "rect",
+      "x": 53.53,
+      "y": 60.59,
+      "width": 9.38,
+      "height": 17.53,
+      "fill": [
+        111,
+        91,
+        67
+      ],
+      "outline": [
+        73,
+        61,
+        49
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 20.92,
+      "y": 36.91,
+      "width": 34,
+      "height": 28,
+      "fill": [
+        132,
+        113,
+        92
+      ],
+      "outline": [
+        83,
+        73,
+        63
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 35.67,
+      "y": 27.58,
+      "width": 42,
+      "height": 32,
+      "fill": [
+        148,
+        124,
+        100
+      ],
+      "outline": [
+        83,
+        73,
+        63
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 59.31,
+      "y": 29.51,
+      "width": 35,
+      "height": 30,
+      "fill": [
+        112,
+        91,
+        72
+      ],
+      "outline": [
+        83,
+        73,
+        63
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 33.0,
+      "y": 45.71,
+      "width": 45,
+      "height": 21,
+      "fill": [
+        97,
+        76,
+        58
+      ],
+      "outline": [
+        83,
+        73,
+        63
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 71.56,
+      "y": 44.7,
+      "width": 23,
+      "height": 21,
+      "fill": [
+        140,
+        117,
+        92
+      ],
+      "outline": [
+        83,
+        73,
+        63
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 78.15,
+      "y": 72.27,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 2.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        83,
+        73,
+        63
+      ],
+      "outline": null,
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 88.13,
+      "y": 54.09,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 2.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        83,
+        73,
+        63
+      ],
+      "outline": null,
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 28.81,
+      "y": 56.2,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 2.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        83,
+        73,
+        63
+      ],
+      "outline": null,
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 42.98,
+      "y": 38.27,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 2.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        83,
+        73,
+        63
+      ],
+      "outline": null,
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 56.55,
+      "y": 31.05,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 2.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        83,
+        73,
+        63
+      ],
+      "outline": null,
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 65.85,
+      "y": 37.81,
+      "rotation_degrees": 0.0,
+      "width": 24.0,
+      "height": 24.0,
+      "radius": 2.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        83,
+        73,
+        63
+      ],
+      "outline": null,
+      "outline_width": 2
+    }
+  ]
+}

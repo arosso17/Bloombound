@@ -6,86 +6,133 @@
   },
   "shapes": [
     {
-      "kind": "circle",
-      "x": 30,
-      "y": 30,
-      "radius": 20,
-      "fill": [
-        77,
-        104,
-        72
-      ]
+      "kind": "ellipse",
+      "x": 12,
+      "y": 21,
+      "width": 16,
+      "height": 28,
+      "fill": [66, 87, 56],
+      "outline": [42, 56, 36],
+      "outline_width": 2,
+      "rotation_degrees": -38
     },
     {
-      "kind": "circle",
-      "x": 30,
-      "y": 30,
-      "radius": 13,
-      "fill": [
-        154,
-        195,
-        140
-      ]
+      "kind": "ellipse",
+      "x": 32,
+      "y": 20,
+      "width": 16,
+      "height": 28,
+      "fill": [66, 87, 56],
+      "outline": [42, 56, 36],
+      "outline_width": 2,
+      "rotation_degrees": 36
     },
     {
-      "kind": "line",
-      "x": 17.48,
-      "y": 32.68,
-      "x2": 40.95,
-      "y2": 40.05,
-      "outline": [
-        58,
-        79,
-        54
-      ],
-      "outline_width": 4
-    },
-    {
-      "kind": "line",
-      "x": 42.21,
-      "y": 32.54,
-      "x2": 18.0,
-      "y2": 40.5,
-      "outline": [
-        58,
-        79,
-        54
-      ],
-      "outline_width": 4
-    },
-    {
-      "kind": "circle",
-      "x": 24.14,
-      "y": 23.53,
-      "width": 24.0,
-      "height": 24.0,
-      "radius": 3.0,
-      "x2": 36.0,
-      "y2": 36.0,
-      "fill": [
-        58,
-        79,
-        54
-      ],
-      "outline": null,
+      "kind": "ellipse",
+      "x": 21,
+      "y": 10,
+      "width": 18,
+      "height": 28,
+      "fill": [75, 101, 60],
+      "outline": [42, 56, 36],
       "outline_width": 2
     },
     {
       "kind": "circle",
-      "x": 34.21,
-      "y": 23.83,
-      "width": 24.0,
-      "height": 24.0,
-      "radius": 3.0,
-      "x2": 36.0,
-      "y2": 36.0,
-      "fill": [
-        58,
-        79,
-        54
-      ],
-      "outline": null,
+      "x": 30,
+      "y": 32,
+      "radius": 16,
+      "fill": [93, 117, 74],
+      "outline": [42, 56, 36],
+      "outline_width": 3
+    },
+    {
+      "kind": "circle",
+      "x": 30,
+      "y": 32,
+      "radius": 11,
+      "fill": [112, 142, 87],
+      "outline": [56, 74, 44],
       "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 30,
+      "y": 34,
+      "radius": 5,
+      "fill": [64, 84, 46]
+    },
+    {
+      "kind": "line",
+      "x": 14,
+      "y": 24,
+      "x2": 7,
+      "y2": 12,
+      "outline": [55, 75, 45],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 16,
+      "y": 49,
+      "x2": 7,
+      "y2": 56,
+      "outline": [55, 75, 45],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 43,
+      "y": 24,
+      "x2": 52,
+      "y2": 13,
+      "outline": [55, 75, 45],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 45,
+      "y": 48,
+      "x2": 54,
+      "y2": 55,
+      "outline": [55, 75, 45],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 23,
+      "y": 29,
+      "x2": 27,
+      "y2": 27,
+      "outline": [250, 219, 120],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 37,
+      "y": 29,
+      "x2": 33,
+      "y2": 27,
+      "outline": [250, 219, 120],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 22,
+      "y": 40,
+      "x2": 30,
+      "y2": 43,
+      "outline": [60, 79, 42],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 38,
+      "y": 40,
+      "x2": 30,
+      "y2": 43,
+      "outline": [60, 79, 42],
+      "outline_width": 3
     }
   ]
 }

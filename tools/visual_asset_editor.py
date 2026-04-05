@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import json
+import math
+import sys
 import tkinter as tk
 from copy import deepcopy
 from pathlib import Path
 from tkinter import colorchooser, filedialog, messagebox, ttk
 
+import pygame as pg
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from gameplay.visual_assets import load_visual_asset, render_visual_asset_to_surface, visual_asset_from_payload
+
 ASSET_DIR = REPO_ROOT / "assets" / "visuals"
+PREVIEW_DIR = REPO_ROOT / "assets" / "visual_previews"
 DEFAULT_ASSET = {
     "asset_id": "untitled_asset",
     "canvas": {"width": 96, "height": 96},
@@ -59,6 +68,7 @@ class VisualAssetEditor:
         self.shape_fields: dict[str, tk.StringVar] = {
             "x": tk.StringVar(value="0"),
             "y": tk.StringVar(value="0"),
+            "rotation_degrees": tk.StringVar(value="0"),
             "width": tk.StringVar(value="24"),
             "height": tk.StringVar(value="24"),
             "radius": tk.StringVar(value="12"),
@@ -117,27 +127,32 @@ class VisualAssetEditor:
         ttk.Button(button_row, text="Save", command=self.save_asset).grid(row=0, column=2, padx=4)
         ttk.Button(button_row, text="Save As", command=self.save_asset_as).grid(row=0, column=3, padx=(4, 0))
 
+        export_row = ttk.Frame(parent)
+        export_row.grid(row=4, column=0, sticky="ew", pady=(0, 10))
+        ttk.Button(export_row, text="Export PNG", command=self.export_asset_png).grid(row=0, column=0, padx=(0, 4), sticky="ew")
+        ttk.Button(export_row, text="Export Sheet", command=self.export_preview_sheet).grid(row=0, column=1, padx=(4, 0), sticky="ew")
+
         assets_header = ttk.Frame(parent)
-        assets_header.grid(row=4, column=0, sticky="ew")
+        assets_header.grid(row=5, column=0, sticky="ew")
         ttk.Label(assets_header, text="Assets In Folder").grid(row=0, column=0, sticky="w")
         ttk.Button(assets_header, text="Refresh", command=self.refresh_asset_files).grid(row=0, column=1, sticky="e", padx=(10, 0))
 
         self.asset_files_listbox = tk.Listbox(parent, height=8, exportselection=False)
-        self.asset_files_listbox.grid(row=5, column=0, sticky="nsew", pady=(4, 10))
+        self.asset_files_listbox.grid(row=6, column=0, sticky="nsew", pady=(4, 10))
         self.asset_files_listbox.bind("<Double-Button-1>", lambda _: self.open_selected_asset_file())
 
         asset_file_buttons = ttk.Frame(parent)
-        asset_file_buttons.grid(row=6, column=0, sticky="ew", pady=(0, 10))
+        asset_file_buttons.grid(row=7, column=0, sticky="ew", pady=(0, 10))
         ttk.Button(asset_file_buttons, text="Open Selected", command=self.open_selected_asset_file).grid(row=0, column=0, sticky="ew")
 
-        ttk.Label(parent, text="Shapes").grid(row=7, column=0, sticky="w")
+        ttk.Label(parent, text="Shapes").grid(row=8, column=0, sticky="w")
         self.shape_listbox = tk.Listbox(parent, height=18, exportselection=False)
-        self.shape_listbox.grid(row=8, column=0, sticky="nsew")
+        self.shape_listbox.grid(row=9, column=0, sticky="nsew")
         self.shape_listbox.bind("<<ListboxSelect>>", lambda _: self._load_selected_shape())
-        parent.rowconfigure(8, weight=1)
+        parent.rowconfigure(9, weight=1)
 
         shape_buttons = ttk.Frame(parent)
-        shape_buttons.grid(row=9, column=0, sticky="ew", pady=(10, 0))
+        shape_buttons.grid(row=10, column=0, sticky="ew", pady=(10, 0))
         ttk.Button(shape_buttons, text="Add Circle", command=lambda: self.add_shape("circle")).grid(row=0, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Rect", command=lambda: self.add_shape("rect")).grid(row=1, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Ellipse", command=lambda: self.add_shape("ellipse")).grid(row=2, column=0, pady=2, sticky="ew")
@@ -153,6 +168,7 @@ class VisualAssetEditor:
         field_names = [
             ("x", "X"),
             ("y", "Y"),
+            ("rotation_degrees", "Rotation"),
             ("width", "Width"),
             ("height", "Height"),
             ("radius", "Radius"),
@@ -220,6 +236,7 @@ class VisualAssetEditor:
             self.save_asset_as()
             return
         self.asset_path.write_text(json.dumps(self.asset, indent=2) + "\n", encoding="utf-8")
+        load_visual_asset.cache_clear()
         self.refresh_asset_files(select_name=self.asset_path.name)
         messagebox.showinfo("Saved", f"Saved {self.asset_path.name}")
 
@@ -237,6 +254,81 @@ class VisualAssetEditor:
             return
         self.asset_path = Path(path)
         self.save_asset()
+
+    def export_asset_png(self) -> None:
+        try:
+            self._sync_asset_metadata()
+        except ValueError as exc:
+            messagebox.showerror("Invalid asset", str(exc))
+            return
+        output_path = PREVIEW_DIR / f"{self.asset['asset_id']}.png"
+        self._ensure_preview_dir()
+        self._save_asset_surface(visual_asset_from_payload(self.asset), output_path)
+        messagebox.showinfo("Exported", f"Exported {output_path.name} to {output_path.parent}")
+
+    def export_preview_sheet(self) -> None:
+        self._ensure_preview_dir()
+        pg.init()
+        try:
+            self._sync_asset_metadata()
+        except ValueError as exc:
+            messagebox.showerror("Invalid asset", str(exc))
+            return
+
+        asset_paths = sorted(ASSET_DIR.glob("*.json"))
+        current_asset = visual_asset_from_payload(self.asset)
+        current_name = self.asset_path.name if self.asset_path is not None else f"{self.asset['asset_id']}.json"
+        assets: list = []
+        used_current_asset = False
+
+        for path in asset_paths:
+            if path.name == current_name:
+                assets.append(current_asset)
+                used_current_asset = True
+                continue
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            assets.append(visual_asset_from_payload(payload))
+
+        if not assets and not self.asset["shapes"]:
+            messagebox.showinfo("No Assets", "No visual assets were found to export.")
+            return
+
+        if not used_current_asset:
+            assets.append(current_asset)
+
+        cols = 3
+        cell_w = 188
+        cell_h = 172
+        margin = 18
+        rows = math.ceil(len(assets) / cols)
+        sheet = pg.Surface((cols * cell_w + margin * 2, rows * cell_h + margin * 2))
+        sheet.fill((237, 231, 216))
+        font = pg.font.SysFont(None, 22)
+        small_font = pg.font.SysFont(None, 18)
+
+        for index, asset in enumerate(assets):
+            col = index % cols
+            row = index // cols
+            cell_left = margin + col * cell_w
+            cell_top = margin + row * cell_h
+            card_rect = pg.Rect(cell_left, cell_top, cell_w - 12, cell_h - 12)
+            pg.draw.rect(sheet, (248, 244, 234), card_rect, border_radius=16)
+            pg.draw.rect(sheet, (170, 160, 145), card_rect, width=2, border_radius=16)
+
+            preview_scale = min(1.0, 104 / max(asset.width, asset.height))
+            preview = render_visual_asset_to_surface(asset, scale=preview_scale, padding=10)
+            preview_rect = preview.get_rect(center=(card_rect.centerx, card_rect.top + 66))
+            sheet.blit(preview, preview_rect)
+
+            name_surf = font.render(asset.asset_id, True, (48, 58, 64))
+            size_surf = small_font.render(f"{asset.width} x {asset.height}", True, (86, 94, 98))
+            sheet.blit(name_surf, (card_rect.left + 12, card_rect.bottom - 48))
+            sheet.blit(size_surf, (card_rect.left + 12, card_rect.bottom - 24))
+
+        output_path = PREVIEW_DIR / "preview_sheet.png"
+        pg.image.save(sheet, output_path)
+        load_visual_asset.cache_clear()
+        messagebox.showinfo("Exported", f"Exported preview_sheet.png to {output_path.parent}")
 
     def refresh_asset_files(self, select_name: str | None = None) -> None:
         self.asset_files_listbox.delete(0, tk.END)
@@ -271,6 +363,7 @@ class VisualAssetEditor:
             "kind": kind,
             "x": 12,
             "y": 12,
+            "rotation_degrees": 0,
             "width": 24,
             "height": 24,
             "radius": 12,
@@ -336,6 +429,7 @@ class VisualAssetEditor:
         try:
             shape["x"] = float(self.shape_fields["x"].get())
             shape["y"] = float(self.shape_fields["y"].get())
+            shape["rotation_degrees"] = float(self.shape_fields["rotation_degrees"].get())
             shape["width"] = float(self.shape_fields["width"].get())
             shape["height"] = float(self.shape_fields["height"].get())
             shape["radius"] = float(self.shape_fields["radius"].get())
@@ -370,6 +464,7 @@ class VisualAssetEditor:
         shape = self.asset["shapes"][index]
         self.shape_fields["x"].set(str(shape.get("x", 0)))
         self.shape_fields["y"].set(str(shape.get("y", 0)))
+        self.shape_fields["rotation_degrees"].set(str(shape.get("rotation_degrees", 0)))
         self.shape_fields["width"].set(str(shape.get("width", 0)))
         self.shape_fields["height"].set(str(shape.get("height", 0)))
         self.shape_fields["radius"].set(str(shape.get("radius", 0)))
@@ -437,7 +532,8 @@ class VisualAssetEditor:
 
         selected_index = self.selected_shape_index()
         if selected_index is not None and selected_index < len(self.asset["shapes"]):
-            bbox = self._shape_screen_bbox(self.asset["shapes"][selected_index], offset_x, offset_y, scale)
+            selected_shape = self.asset["shapes"][selected_index]
+            bbox = self._shape_screen_bbox(selected_shape, offset_x, offset_y, scale)
             if bbox is not None:
                 self.preview_canvas.create_rectangle(
                     bbox[0] - 4,
@@ -448,12 +544,22 @@ class VisualAssetEditor:
                     width=2,
                     dash=(6, 4),
                 )
-            for handle_name, handle_x, handle_y in self._shape_resize_handles(
-                self.asset["shapes"][selected_index],
-                offset_x,
-                offset_y,
-                scale,
-            ):
+            rotate_handle = self._shape_rotate_handle(selected_shape, offset_x, offset_y, scale)
+            if rotate_handle is not None:
+                handle_name, handle_x, handle_y = rotate_handle
+                center_x, center_y = self._shape_screen_center(selected_shape, offset_x, offset_y, scale)
+                self.preview_canvas.create_line(center_x, center_y, handle_x, handle_y, fill="#2f6fed", dash=(3, 3))
+                self.preview_canvas.create_oval(
+                    handle_x - 6,
+                    handle_y - 6,
+                    handle_x + 6,
+                    handle_y + 6,
+                    fill="#f0f6ff",
+                    outline="#2f6fed",
+                    width=2,
+                    tags=("handle", f"handle-{handle_name}"),
+                )
+            for handle_name, handle_x, handle_y in self._shape_resize_handles(selected_shape, offset_x, offset_y, scale):
                 self.preview_canvas.create_rectangle(
                     handle_x - 5,
                     handle_y - 5,
@@ -488,40 +594,37 @@ class VisualAssetEditor:
             return
 
         if shape["kind"] in {"rect", "ellipse"}:
-            x = offset_x + float(shape.get("x", 0)) * scale
-            y = offset_y + float(shape.get("y", 0)) * scale
-            w = float(shape.get("width", 0)) * scale
-            h = float(shape.get("height", 0)) * scale
-            if shape["kind"] == "rect":
-                self.preview_canvas.create_rectangle(
-                    x,
-                    y,
-                    x + w,
-                    y + h,
-                    fill=fill,
-                    outline=outline,
-                    width=outline_width if outline else 0,
-                    tags=tags,
-                )
-            else:
-                self.preview_canvas.create_oval(
-                    x,
-                    y,
-                    x + w,
-                    y + h,
-                    fill=fill,
-                    outline=outline,
-                    width=outline_width if outline else 0,
-                    tags=tags,
-                )
+            points = self._shape_screen_points(shape, offset_x, offset_y, scale)
+            if not points:
+                return
+            flat_points = [coordinate for point in points for coordinate in point]
+            self.preview_canvas.create_polygon(
+                *flat_points,
+                fill=fill,
+                outline=outline,
+                width=outline_width if outline else 0,
+                smooth=(shape["kind"] == "ellipse"),
+                splinesteps=24,
+                tags=tags,
+            )
             return
 
         if shape["kind"] == "line":
+            x1 = float(shape.get("x", 0))
+            y1 = float(shape.get("y", 0))
+            x2 = float(shape.get("x2", 0))
+            y2 = float(shape.get("y2", 0))
+            rotation = float(shape.get("rotation_degrees", 0.0))
+            if abs(rotation) >= 0.01:
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+                x1, y1 = self._rotate_point(x1, y1, center_x, center_y, rotation)
+                x2, y2 = self._rotate_point(x2, y2, center_x, center_y, rotation)
             self.preview_canvas.create_line(
-                offset_x + float(shape.get("x", 0)) * scale,
-                offset_y + float(shape.get("y", 0)) * scale,
-                offset_x + float(shape.get("x2", 0)) * scale,
-                offset_y + float(shape.get("y2", 0)) * scale,
+                offset_x + x1 * scale,
+                offset_y + y1 * scale,
+                offset_x + x2 * scale,
+                offset_y + y2 * scale,
                 fill=outline or "#000000",
                 width=outline_width,
                 tags=tags,
@@ -535,7 +638,7 @@ class VisualAssetEditor:
             if handle_name is not None:
                 self.drag_shape_index = selected_index
                 self.drag_last_world = world_point
-                self.drag_mode = "resize"
+                self.drag_mode = "rotate" if handle_name == "rotate" else "resize"
                 self.drag_handle = handle_name
                 return
 
@@ -561,7 +664,9 @@ class VisualAssetEditor:
         world_x, world_y = self._preview_to_world(event.x, event.y)
 
         shape = self.asset["shapes"][self.drag_shape_index]
-        if self.drag_mode == "resize":
+        if self.drag_mode == "rotate":
+            self._rotate_shape_to_pointer(shape, world_x, world_y)
+        elif self.drag_mode == "resize":
             self._resize_shape(shape, self.drag_handle, world_x, world_y)
         else:
             last_x, last_y = self.drag_last_world
@@ -640,6 +745,16 @@ class VisualAssetEditor:
     def _handle_at_screen_point(self, shape_index: int, screen_x: float, screen_y: float) -> str | None:
         if shape_index >= len(self.asset["shapes"]):
             return None
+        rotate_handle = self._shape_rotate_handle(
+            self.asset["shapes"][shape_index],
+            self.preview_offset_x,
+            self.preview_offset_y,
+            self.preview_scale,
+        )
+        if rotate_handle is not None:
+            handle_name, handle_x, handle_y = rotate_handle
+            if abs(screen_x - handle_x) <= 8 and abs(screen_y - handle_y) <= 8:
+                return handle_name
         for handle_name, handle_x, handle_y in self._shape_resize_handles(
             self.asset["shapes"][shape_index],
             self.preview_offset_x,
@@ -670,6 +785,18 @@ class VisualAssetEditor:
             ]
 
         if kind in {"rect", "ellipse"}:
+            points = self._shape_screen_points(shape, offset_x, offset_y, scale)
+            if len(points) == 4:
+                x, y = points[0]
+                x2, y2 = points[1]
+                x3, y3 = points[2]
+                x4, y4 = points[3]
+                return [
+                    ("nw", x, y),
+                    ("ne", x2, y2),
+                    ("se", x3, y3),
+                    ("sw", x4, y4),
+                ]
             x = offset_x + float(shape.get("x", 0)) * scale
             y = offset_y + float(shape.get("y", 0)) * scale
             width = float(shape.get("width", 0)) * scale
@@ -682,10 +809,20 @@ class VisualAssetEditor:
             ]
 
         if kind == "line":
-            x1 = offset_x + float(shape.get("x", 0)) * scale
-            y1 = offset_y + float(shape.get("y", 0)) * scale
-            x2 = offset_x + float(shape.get("x2", 0)) * scale
-            y2 = offset_y + float(shape.get("y2", 0)) * scale
+            x1 = float(shape.get("x", 0))
+            y1 = float(shape.get("y", 0))
+            x2 = float(shape.get("x2", 0))
+            y2 = float(shape.get("y2", 0))
+            rotation = float(shape.get("rotation_degrees", 0.0))
+            if abs(rotation) >= 0.01:
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+                x1, y1 = self._rotate_point(x1, y1, center_x, center_y, rotation)
+                x2, y2 = self._rotate_point(x2, y2, center_x, center_y, rotation)
+            x1 = offset_x + x1 * scale
+            y1 = offset_y + y1 * scale
+            x2 = offset_x + x2 * scale
+            y2 = offset_y + y2 * scale
             return [("start", x1, y1), ("end", x2, y2)]
 
         return []
@@ -704,6 +841,7 @@ class VisualAssetEditor:
             return
 
         if kind in {"rect", "ellipse"}:
+            world_x, world_y = self._inverse_rotate_point_for_shape(shape, world_x, world_y)
             left = float(shape.get("x", 0))
             top = float(shape.get("y", 0))
             right = left + float(shape.get("width", 0))
@@ -725,6 +863,13 @@ class VisualAssetEditor:
             return
 
         if kind == "line":
+            if handle_name not in {"start", "end"}:
+                return
+            rotation = float(shape.get("rotation_degrees", 0.0))
+            if abs(rotation) >= 0.01:
+                center_x = (float(shape.get("x", 0)) + float(shape.get("x2", 0))) / 2
+                center_y = (float(shape.get("y", 0)) + float(shape.get("y2", 0))) / 2
+                world_x, world_y = self._rotate_point(world_x, world_y, center_x, center_y, -rotation)
             if handle_name == "start":
                 shape["x"] = round(world_x, 2)
                 shape["y"] = round(world_y, 2)
@@ -741,11 +886,12 @@ class VisualAssetEditor:
             return (delta_x * delta_x) + (delta_y * delta_y) <= radius * radius
 
         if kind == "rect":
+            rotated_x, rotated_y = self._inverse_rotate_point_for_shape(shape, world_x, world_y)
             x = float(shape.get("x", 0))
             y = float(shape.get("y", 0))
             width = float(shape.get("width", 0))
             height = float(shape.get("height", 0))
-            return x <= world_x <= x + width and y <= world_y <= y + height
+            return x <= rotated_x <= x + width and y <= rotated_y <= y + height
 
         if kind == "ellipse":
             width = float(shape.get("width", 0))
@@ -754,18 +900,29 @@ class VisualAssetEditor:
                 return False
             center_x = float(shape.get("x", 0)) + width / 2
             center_y = float(shape.get("y", 0)) + height / 2
-            norm_x = (world_x - center_x) / (width / 2)
-            norm_y = (world_y - center_y) / (height / 2)
+            rotated_x, rotated_y = self._inverse_rotate_point_for_shape(shape, world_x, world_y)
+            norm_x = (rotated_x - center_x) / (width / 2)
+            norm_y = (rotated_y - center_y) / (height / 2)
             return (norm_x * norm_x) + (norm_y * norm_y) <= 1.0
 
         if kind == "line":
+            x1 = float(shape.get("x", 0))
+            y1 = float(shape.get("y", 0))
+            x2 = float(shape.get("x2", 0))
+            y2 = float(shape.get("y2", 0))
+            rotation = float(shape.get("rotation_degrees", 0.0))
+            if abs(rotation) >= 0.01:
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+                x1, y1 = self._rotate_point(x1, y1, center_x, center_y, rotation)
+                x2, y2 = self._rotate_point(x2, y2, center_x, center_y, rotation)
             return self._point_near_line(
                 world_x,
                 world_y,
-                float(shape.get("x", 0)),
-                float(shape.get("y", 0)),
-                float(shape.get("x2", 0)),
-                float(shape.get("y2", 0)),
+                x1,
+                y1,
+                x2,
+                y2,
                 tolerance=max(4.0, float(shape.get("outline_width", 0)) + 2.0),
             )
 
@@ -809,17 +966,28 @@ class VisualAssetEditor:
             return (x - radius, y - radius, x + radius, y + radius)
 
         if kind in {"rect", "ellipse"}:
-            x = offset_x + float(shape.get("x", 0)) * scale
-            y = offset_y + float(shape.get("y", 0)) * scale
-            w = float(shape.get("width", 0)) * scale
-            h = float(shape.get("height", 0)) * scale
-            return (x, y, x + w, y + h)
+            points = self._shape_screen_points(shape, offset_x, offset_y, scale)
+            if not points:
+                return None
+            xs = [point[0] for point in points]
+            ys = [point[1] for point in points]
+            return (min(xs), min(ys), max(xs), max(ys))
 
         if kind == "line":
-            x1 = offset_x + float(shape.get("x", 0)) * scale
-            y1 = offset_y + float(shape.get("y", 0)) * scale
-            x2 = offset_x + float(shape.get("x2", 0)) * scale
-            y2 = offset_y + float(shape.get("y2", 0)) * scale
+            x1 = float(shape.get("x", 0))
+            y1 = float(shape.get("y", 0))
+            x2 = float(shape.get("x2", 0))
+            y2 = float(shape.get("y2", 0))
+            rotation = float(shape.get("rotation_degrees", 0.0))
+            if abs(rotation) >= 0.01:
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+                x1, y1 = self._rotate_point(x1, y1, center_x, center_y, rotation)
+                x2, y2 = self._rotate_point(x2, y2, center_x, center_y, rotation)
+            x1 = offset_x + x1 * scale
+            y1 = offset_y + y1 * scale
+            x2 = offset_x + x2 * scale
+            y2 = offset_y + y2 * scale
             padding = max(6.0, float(shape.get("outline_width", 0)) * scale)
             return (
                 min(x1, x2) - padding,
@@ -830,6 +998,126 @@ class VisualAssetEditor:
 
         return None
 
+    def _shape_screen_points(
+        self,
+        shape: dict,
+        offset_x: float,
+        offset_y: float,
+        scale: float,
+    ) -> list[tuple[float, float]]:
+        kind = shape["kind"]
+        x = float(shape.get("x", 0))
+        y = float(shape.get("y", 0))
+        width = float(shape.get("width", 0))
+        height = float(shape.get("height", 0))
+        center_x = x + width / 2
+        center_y = y + height / 2
+        rotation = float(shape.get("rotation_degrees", 0.0))
+
+        if kind == "rect":
+            corners = [
+                (x, y),
+                (x + width, y),
+                (x + width, y + height),
+                (x, y + height),
+            ]
+            return [
+                (
+                    offset_x + rotated_x * scale,
+                    offset_y + rotated_y * scale,
+                )
+                for rotated_x, rotated_y in (
+                    self._rotate_point(px, py, center_x, center_y, rotation)
+                    for px, py in corners
+                )
+            ]
+
+        if kind == "ellipse":
+            points: list[tuple[float, float]] = []
+            radius_x = width / 2
+            radius_y = height / 2
+            if radius_x <= 0 or radius_y <= 0:
+                return points
+            for step in range(24):
+                theta = (math.tau * step) / 24
+                point_x = center_x + math.cos(theta) * radius_x
+                point_y = center_y + math.sin(theta) * radius_y
+                rotated_x, rotated_y = self._rotate_point(point_x, point_y, center_x, center_y, rotation)
+                points.append((offset_x + rotated_x * scale, offset_y + rotated_y * scale))
+            return points
+
+        return []
+
+    def _inverse_rotate_point_for_shape(self, shape: dict, world_x: float, world_y: float) -> tuple[float, float]:
+        width = float(shape.get("width", 0))
+        height = float(shape.get("height", 0))
+        center_x = float(shape.get("x", 0)) + width / 2
+        center_y = float(shape.get("y", 0)) + height / 2
+        rotation = float(shape.get("rotation_degrees", 0.0))
+        return self._rotate_point(world_x, world_y, center_x, center_y, -rotation)
+
+    def _rotate_shape_to_pointer(self, shape: dict, world_x: float, world_y: float) -> None:
+        center_x, center_y = self._shape_center(shape)
+        angle = math.degrees(math.atan2(world_y - center_y, world_x - center_x)) + 90.0
+        shape["rotation_degrees"] = round(angle, 2)
+
+    def _shape_center(self, shape: dict) -> tuple[float, float]:
+        kind = shape["kind"]
+        if kind == "circle":
+            return float(shape.get("x", 0)), float(shape.get("y", 0))
+        if kind in {"rect", "ellipse"}:
+            return (
+                float(shape.get("x", 0)) + float(shape.get("width", 0)) / 2,
+                float(shape.get("y", 0)) + float(shape.get("height", 0)) / 2,
+            )
+        if kind == "line":
+            return (
+                (float(shape.get("x", 0)) + float(shape.get("x2", 0))) / 2,
+                (float(shape.get("y", 0)) + float(shape.get("y2", 0))) / 2,
+            )
+        return float(shape.get("x", 0)), float(shape.get("y", 0))
+
+    def _shape_screen_center(self, shape: dict, offset_x: float, offset_y: float, scale: float) -> tuple[float, float]:
+        center_x, center_y = self._shape_center(shape)
+        return offset_x + center_x * scale, offset_y + center_y * scale
+
+    def _shape_rotate_handle(
+        self,
+        shape: dict,
+        offset_x: float,
+        offset_y: float,
+        scale: float,
+    ) -> tuple[str, float, float] | None:
+        if shape["kind"] == "circle":
+            return None
+        center_x, center_y = self._shape_center(shape)
+        if shape["kind"] in {"rect", "ellipse"}:
+            local_x = center_x
+            local_y = float(shape.get("y", 0)) - 18.0
+        else:
+            local_x = center_x
+            local_y = center_y - 18.0
+        rotated_x, rotated_y = self._rotate_point(
+            local_x,
+            local_y,
+            center_x,
+            center_y,
+            float(shape.get("rotation_degrees", 0.0)),
+        )
+        return ("rotate", offset_x + rotated_x * scale, offset_y + rotated_y * scale)
+
+    @staticmethod
+    def _rotate_point(x: float, y: float, center_x: float, center_y: float, rotation_degrees: float) -> tuple[float, float]:
+        radians = math.radians(rotation_degrees)
+        cos_theta = math.cos(radians)
+        sin_theta = math.sin(radians)
+        rel_x = x - center_x
+        rel_y = y - center_y
+        return (
+            center_x + rel_x * cos_theta - rel_y * sin_theta,
+            center_y + rel_x * sin_theta + rel_y * cos_theta,
+        )
+
     def _load_asset_from_path(self, path: Path) -> None:
         self.asset_path = path
         self.asset = json.loads(self.asset_path.read_text(encoding="utf-8"))
@@ -838,6 +1126,17 @@ class VisualAssetEditor:
         self.drag_mode = None
         self.drag_handle = None
         self._refresh_all()
+
+    def _ensure_preview_dir(self) -> None:
+        PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _save_asset_surface(self, asset, output_path: Path) -> None:
+        pg.init()
+        preview = render_visual_asset_to_surface(asset, scale=1.0, padding=12)
+        background = pg.Surface(preview.get_size())
+        background.fill((248, 244, 234))
+        background.blit(preview, (0, 0))
+        pg.image.save(background, output_path)
 
 
 def main() -> None:

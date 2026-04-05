@@ -49,6 +49,8 @@ class MapEditor:
         self.map_name_var = tk.StringVar(value=self.map_data["name"])
         self.world_width_var = tk.StringVar(value=str(self.map_data["world"]["width"]))
         self.world_height_var = tk.StringVar(value=str(self.map_data["world"]["height"]))
+        self.decoration_asset_var = tk.StringVar(value="")
+        self.decoration_asset_options: list[str] = []
         self.layer_visibility_vars: dict[str, tk.BooleanVar] = {
             "collision_rects": tk.BooleanVar(value=True),
             "traversal_barriers": tk.BooleanVar(value=True),
@@ -264,9 +266,18 @@ class MapEditor:
 
         ttk.Checkbutton(parent, text="Snap To Grid", variable=self.snap_to_grid_var).grid(row=6, column=0, sticky="w", pady=(10, 4))
 
-        ttk.Label(parent, text="Layers").grid(row=7, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Decoration Asset").grid(row=7, column=0, sticky="w", pady=(12, 4))
+        self.decoration_asset_combo = ttk.Combobox(
+            parent,
+            textvariable=self.decoration_asset_var,
+            state="readonly",
+            height=12,
+        )
+        self.decoration_asset_combo.grid(row=8, column=0, sticky="ew")
+
+        ttk.Label(parent, text="Layers").grid(row=9, column=0, sticky="w", pady=(12, 4))
         layers_frame = ttk.Frame(parent)
-        layers_frame.grid(row=8, column=0, sticky="ew")
+        layers_frame.grid(row=10, column=0, sticky="ew")
         layer_specs = [
             ("collision_rects", "Collision"),
             ("traversal_barriers", "Barriers"),
@@ -289,11 +300,11 @@ class MapEditor:
                 command=self._draw_canvas,
             ).grid(row=index, column=0, sticky="w", pady=1)
 
-        ttk.Label(parent, text="Objects").grid(row=9, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Objects").grid(row=11, column=0, sticky="w", pady=(12, 4))
         self.object_listbox = tk.Listbox(parent, height=20, exportselection=False)
-        self.object_listbox.grid(row=10, column=0, sticky="nsew")
+        self.object_listbox.grid(row=12, column=0, sticky="nsew")
         self.object_listbox.bind("<<ListboxSelect>>", lambda _event: self._load_selected_object_from_list())
-        parent.rowconfigure(10, weight=1)
+        parent.rowconfigure(12, weight=1)
 
     def _build_canvas(self, parent: ttk.Frame) -> None:
         ttk.Label(parent, text="Map").grid(row=0, column=0, sticky="w")
@@ -356,7 +367,17 @@ class MapEditor:
         for index, (field_key, label) in enumerate(field_specs):
             row_index = base_row + index * 2
             ttk.Label(parent, text=label).grid(row=row_index, column=0, sticky="w", pady=(3, 0))
-            ttk.Entry(parent, textvariable=self.property_vars[field_key], width=24).grid(row=row_index + 1, column=0, sticky="ew", pady=(0, 2))
+            if field_key == "asset_id":
+                self.asset_id_combo = ttk.Combobox(
+                    parent,
+                    textvariable=self.property_vars[field_key],
+                    state="readonly",
+                    height=12,
+                )
+                self.asset_id_combo.grid(row=row_index + 1, column=0, sticky="ew", pady=(0, 2))
+                self.asset_id_combo.bind("<<ComboboxSelected>>", lambda _event: self._sync_selected_decoration_asset())
+            else:
+                ttk.Entry(parent, textvariable=self.property_vars[field_key], width=24).grid(row=row_index + 1, column=0, sticky="ew", pady=(0, 2))
 
         action_row = base_row + len(field_specs) * 2
         ttk.Button(parent, text="Apply Object Changes", command=self.apply_selected_object_changes).grid(row=action_row, column=0, sticky="ew", pady=(10, 4))
@@ -433,6 +454,20 @@ class MapEditor:
                 self.map_files_listbox.see(index)
                 break
 
+    def refresh_visual_asset_files(self) -> None:
+        self.decoration_asset_options = [path.stem for path in sorted(VISUALS_DIR.glob("*.json"))]
+        if not self.decoration_asset_options:
+            self.decoration_asset_options = ["decoration_asset"]
+        self.decoration_asset_combo["values"] = self.decoration_asset_options
+        if hasattr(self, "asset_id_combo"):
+            self.asset_id_combo["values"] = self.decoration_asset_options
+        current_default = self.decoration_asset_var.get().strip()
+        if current_default not in self.decoration_asset_options:
+            self.decoration_asset_var.set(self.decoration_asset_options[0])
+        current_object_asset = self.property_vars["asset_id"].get().strip()
+        if current_object_asset and current_object_asset not in self.decoration_asset_options:
+            self.property_vars["asset_id"].set(self.decoration_asset_options[0])
+
     def apply_map_properties(self) -> None:
         try:
             width = int(float(self.world_width_var.get()))
@@ -468,6 +503,7 @@ class MapEditor:
             elif section == "decorations":
                 obj["decoration_id"] = self.property_vars["id"].get().strip() or obj["decoration_id"]
                 obj["asset_id"] = self.property_vars["asset_id"].get().strip() or obj["asset_id"]
+                self.decoration_asset_var.set(obj["asset_id"])
                 obj["restored_by_zone_id"] = self.property_vars["restored_by_zone_id"].get().strip()
                 obj["scale"] = max(0.1, self._parse_float_var("scale"))
             elif section == "patrol_points":
@@ -640,6 +676,7 @@ class MapEditor:
         self.map_name_var.set(self.map_data["name"])
         self.world_width_var.set(str(self.map_data["world"]["width"]))
         self.world_height_var.set(str(self.map_data["world"]["height"]))
+        self.refresh_visual_asset_files()
         self.refresh_map_files()
         self._refresh_object_list()
         self._load_selected_object_properties()
@@ -745,6 +782,9 @@ class MapEditor:
             self._set_property("id", obj.get("barrier_id", ""))
         elif section == "decorations":
             self._set_property("id", obj.get("decoration_id", ""))
+            asset_id = obj.get("asset_id", "")
+            if asset_id in self.decoration_asset_options:
+                self.decoration_asset_var.set(asset_id)
         elif section == "patrol_points":
             self._set_property("id", obj.get("point_id", ""))
         elif section == "egg_spawns":
@@ -1228,10 +1268,28 @@ class MapEditor:
         return f"{prefix}_{index}"
 
     def _default_asset_id(self) -> str:
+        selected_asset = self.decoration_asset_var.get().strip()
+        if selected_asset:
+            return selected_asset
         visual_paths = sorted(VISUALS_DIR.glob("*.json"))
         if not visual_paths:
             return "decoration_asset"
         return visual_paths[0].stem
+
+    def _sync_selected_decoration_asset(self) -> None:
+        target = self._selected_object()
+        if target is None:
+            return
+        section, _, obj = target
+        if section != "decorations":
+            return
+        selected_asset = self.property_vars["asset_id"].get().strip()
+        if not selected_asset:
+            return
+        obj["asset_id"] = selected_asset
+        self.decoration_asset_var.set(selected_asset)
+        self._refresh_object_list()
+        self._draw_canvas()
 
     def _world_to_screen(self, world_x: float, world_y: float) -> tuple[float, float]:
         return ((world_x - self.camera_x) * self.preview_scale, (world_y - self.camera_y) * self.preview_scale)

@@ -1,0 +1,82 @@
+{
+  "asset_id": "dead_tulip",
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "shapes": [
+    {
+      "kind": "line",
+      "x": 48,
+      "y": 49,
+      "x2": 45,
+      "y2": 94,
+      "outline": [92, 96, 72],
+      "outline_width": 3
+    },
+    {
+      "kind": "ellipse",
+      "x": 31,
+      "y": 58,
+      "width": 16,
+      "height": 7,
+      "fill": [117, 108, 74],
+      "outline": [67, 73, 58],
+      "outline_width": 2,
+      "rotation_degrees": -32
+    },
+    {
+      "kind": "ellipse",
+      "x": 46,
+      "y": 55,
+      "width": 18,
+      "height": 8,
+      "fill": [133, 120, 79],
+      "outline": [67, 73, 58],
+      "outline_width": 2,
+      "rotation_degrees": 24
+    },
+    {
+      "kind": "ellipse",
+      "x": 46,
+      "y": 26,
+      "width": 14,
+      "height": 26,
+      "fill": [129, 71, 32],
+      "outline": [63, 57, 50],
+      "outline_width": 2,
+      "rotation_degrees": 38
+    },
+    {
+      "kind": "ellipse",
+      "x": 41,
+      "y": 18,
+      "width": 13,
+      "height": 24,
+      "fill": [86, 42, 21],
+      "outline": [63, 57, 50],
+      "outline_width": 2,
+      "rotation_degrees": 26
+    },
+    {
+      "kind": "ellipse",
+      "x": 50,
+      "y": 34,
+      "width": 10,
+      "height": 16,
+      "fill": [98, 52, 24],
+      "outline": [63, 57, 50],
+      "outline_width": 2,
+      "rotation_degrees": 58
+    },
+    {
+      "kind": "line",
+      "x": 53,
+      "y": 22,
+      "x2": 47,
+      "y2": 30,
+      "outline": [112, 74, 52],
+      "outline_width": 2
+    }
+  ]
+}

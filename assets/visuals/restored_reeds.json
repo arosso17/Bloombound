@@ -1,0 +1,99 @@
+{
+  "asset_id": "restored_reeds",
+  "canvas": {
+    "width": 96,
+    "height": 104
+  },
+  "shapes": [
+    {
+      "kind": "ellipse",
+      "x": 20,
+      "y": 84,
+      "width": 55,
+      "height": 10,
+      "fill": [104, 141, 82],
+      "outline": [68, 94, 57],
+      "outline_width": 2
+    },
+    {
+      "kind": "line",
+      "x": 27,
+      "y": 90,
+      "x2": 18,
+      "y2": 28,
+      "outline": [90, 143, 84],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 43,
+      "y": 90,
+      "x2": 44,
+      "y2": 16,
+      "outline": [82, 132, 79],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 57,
+      "y": 90,
+      "x2": 62,
+      "y2": 21,
+      "outline": [98, 149, 88],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 72,
+      "y": 90,
+      "x2": 85,
+      "y2": 34,
+      "outline": [90, 140, 84],
+      "outline_width": 3
+    },
+    {
+      "kind": "ellipse",
+      "x": 14,
+      "y": 23,
+      "width": 11,
+      "height": 18,
+      "fill": [253, 205, 97],
+      "outline": [150, 123, 44],
+      "outline_width": 2,
+      "rotation_degrees": -28
+    },
+    {
+      "kind": "ellipse",
+      "x": 39,
+      "y": 8,
+      "width": 12,
+      "height": 22,
+      "fill": [241, 157, 92],
+      "outline": [143, 95, 54],
+      "outline_width": 2,
+      "rotation_degrees": -8
+    },
+    {
+      "kind": "ellipse",
+      "x": 58,
+      "y": 12,
+      "width": 12,
+      "height": 20,
+      "fill": [255, 225, 114],
+      "outline": [150, 123, 44],
+      "outline_width": 2,
+      "rotation_degrees": 9
+    },
+    {
+      "kind": "ellipse",
+      "x": 81,
+      "y": 26,
+      "width": 9,
+      "height": 15,
+      "fill": [247, 178, 118],
+      "outline": [143, 95, 54],
+      "outline_width": 2,
+      "rotation_degrees": 21
+    }
+  ]
+}

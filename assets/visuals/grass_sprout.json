@@ -1,0 +1,66 @@
+{
+  "asset_id": "grass_sprout",
+  "canvas": {
+    "width": 48,
+    "height": 40
+  },
+  "shapes": [
+    {
+      "kind": "ellipse",
+      "x": 12,
+      "y": 14,
+      "width": 10,
+      "height": 18,
+      "fill": [
+        138,
+        164,
+        116
+      ],
+      "outline": [
+        108,
+        131,
+        88
+      ],
+      "outline_width": 2,
+      "rotation_degrees": -28
+    },
+    {
+      "kind": "ellipse",
+      "x": 19,
+      "y": 8,
+      "width": 10,
+      "height": 22,
+      "fill": [
+        132,
+        159,
+        110
+      ],
+      "outline": [
+        104,
+        127,
+        86
+      ],
+      "outline_width": 2,
+      "rotation_degrees": -6
+    },
+    {
+      "kind": "ellipse",
+      "x": 26,
+      "y": 13,
+      "width": 10,
+      "height": 18,
+      "fill": [
+        142,
+        168,
+        120
+      ],
+      "outline": [
+        110,
+        133,
+        91
+      ],
+      "outline_width": 2,
+      "rotation_degrees": 24
+    }
+  ]
+}

@@ -57,6 +57,12 @@ python tools/visual_asset_editor.py
 
 The editor saves the same format the game loads at runtime, so authored visuals can be used directly by the client renderer.
 
+It can also export:
+- a PNG for the currently open asset
+- a `preview_sheet.png` contact sheet for everything in `assets/visuals/`
+
+Exports are written to `assets/visual_previews/`.
+
 ## Map Editor
 
 Maps live in `gameplay/maps/` as JSON files and can be edited with the dedicated map tool:

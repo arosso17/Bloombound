@@ -1,10 +1,77 @@
 {
   "asset_id": "shrine",
-  "canvas": { "width": 96, "height": 96 },
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
   "shapes": [
-    { "kind": "circle", "x": 48, "y": 48, "radius": 32, "fill": [255, 247, 215] },
-    { "kind": "circle", "x": 48, "y": 48, "radius": 24, "fill": [255, 216, 138] },
-    { "kind": "circle", "x": 48, "y": 48, "radius": 14, "fill": [255, 238, 198] },
-    { "kind": "line", "x": 26, "y": 64, "x2": 70, "y2": 64, "outline": [221, 176, 102], "outline_width": 4 }
+    {
+      "kind": "circle",
+      "x": 48,
+      "y": 34,
+      "radius": 24,
+      "fill": [255, 247, 215, 92]
+    },
+    {
+      "kind": "ellipse",
+      "x": 18,
+      "y": 60,
+      "width": 60,
+      "height": 16,
+      "fill": [197, 156, 98],
+      "outline": [134, 106, 72],
+      "outline_width": 2
+    },
+    {
+      "kind": "rect",
+      "x": 32,
+      "y": 47,
+      "width": 32,
+      "height": 19,
+      "fill": [234, 212, 172],
+      "outline": [165, 137, 92],
+      "outline_width": 2
+    },
+    {
+      "kind": "line",
+      "x": 32,
+      "y": 59,
+      "x2": 18,
+      "y2": 44,
+      "outline": [221, 176, 102],
+      "outline_width": 4
+    },
+    {
+      "kind": "line",
+      "x": 64,
+      "y": 59,
+      "x2": 78,
+      "y2": 44,
+      "outline": [221, 176, 102],
+      "outline_width": 4
+    },
+    {
+      "kind": "circle",
+      "x": 48,
+      "y": 38,
+      "radius": 16,
+      "fill": [255, 216, 138]
+    },
+    {
+      "kind": "circle",
+      "x": 48,
+      "y": 38,
+      "radius": 8,
+      "fill": [255, 238, 198]
+    },
+    {
+      "kind": "ellipse",
+      "x": 28,
+      "y": 18,
+      "width": 40,
+      "height": 42,
+      "outline": [240, 214, 157],
+      "outline_width": 3
+    }
   ]
 }
