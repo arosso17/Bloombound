@@ -52,6 +52,7 @@ class DecorationDef:
     y: float
     scale: float = 1.0
     restored_by_zone_id: str = ""
+    draw_above_entities: bool = False
 
 
 @dataclass(frozen=True)

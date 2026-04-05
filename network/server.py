@@ -50,6 +50,10 @@ class GameServer:
         self.sessions_lock = threading.Lock()
         self.diagnostics = ServerDiagnostics(enabled=net_debug)
 
+    def _debug_log(self, message: str) -> None:
+        if self.diagnostics.enabled:
+            print(f"[net][server][restart] {message}", flush=True)
+
     def start(self) -> None:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -119,6 +123,7 @@ class GameServer:
                     "type": "welcome",
                     "player_id": player_id,
                     "map_id": self.state.map_id,
+                    "round_id": self.state.round_id,
                     "tick_rate": self.tick_rate,
                     "udp_port": self.udp_port,
                     "match_phase": self.state.match_phase,
@@ -231,8 +236,33 @@ class GameServer:
             elif message_type == "player_input":
                 self.state.apply_input(player_id, message)
             elif message_type == "start_game":
+                session_count = len(self.state.players)
+                if player_id != self.state.host_id:
+                    self._debug_log(
+                        f"reject start_game player_id={player_id} host_id={self.state.host_id or '-'} "
+                        f"phase={self.state.match_phase} reason=not_host"
+                    )
+                    continue
+                if session_count < self.state.expected_players:
+                    self._debug_log(
+                        f"reject start_game player_id={player_id} host_id={self.state.host_id or '-'} "
+                        f"phase={self.state.match_phase} players={session_count}/{self.state.expected_players} "
+                        f"reason=not_enough_players"
+                    )
+                    continue
+                self._debug_log(
+                    f"accept start_game player_id={player_id} host_id={self.state.host_id or '-'} "
+                    f"phase={self.state.match_phase} players={session_count}/{self.state.expected_players}"
+                )
                 if self.state.start_match(player_id):
+                    self._debug_log(
+                        f"start_game applied new_phase={self.state.match_phase} tick={self.state.tick}"
+                    )
                     self._broadcast(self.state.build_snapshot())
+                else:
+                    self._debug_log(
+                        f"start_game unexpectedly failed player_id={player_id} phase={self.state.match_phase}"
+                    )
             elif message_type == "ping":
                 session = self._get_session(player_id)
                 if session is not None:

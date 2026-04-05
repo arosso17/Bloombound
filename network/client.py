@@ -65,6 +65,7 @@ INPUT_SEND_INTERVAL = 1.0 / 20.0
 
 @dataclass
 class ClientSnapshot:
+    round_id: int = 0
     tick: int = 0
     world_width: int = 1200
     world_height: int = 720
@@ -210,6 +211,10 @@ class EasterClientApp:
             "spirit_seed": load_visual_asset("spirit_seed"),
         }
 
+    def _debug_log(self, message: str) -> None:
+        if self.diagnostics.enabled:
+            print(f"[net][client][restart] {message}", flush=True)
+
     def _apply_display_mode(self) -> pg.Surface:
         if self.fullscreen:
             return pg.display.set_mode((0, 0), pg.FULLSCREEN)
@@ -289,7 +294,9 @@ class EasterClientApp:
             if message_type == "welcome":
                 self.player_id = str(message["player_id"])
                 self._load_map(str(message.get("map_id", "new_map")))
-                self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
+                self.snapshot.round_id = int(message.get("round_id", 0))
+                self.snapshot.tick = 0
+                self._set_match_phase(str(message.get("match_phase", "lobby")), source="welcome")
                 self.snapshot.world_width = int(message["world"]["width"])
                 self.snapshot.world_height = int(message["world"]["height"])
                 self.network.udp_port = int(message.get("udp_port", self.network.udp_port))
@@ -302,7 +309,9 @@ class EasterClientApp:
                 self._send_profile_update()
             elif message_type == "lobby_state":
                 self._load_map(str(message.get("map_id", "new_map")))
-                self.snapshot.match_phase = str(message.get("match_phase", "lobby"))
+                self.snapshot.round_id = int(message.get("round_id", self.snapshot.round_id))
+                self.snapshot.tick = 0
+                self._set_match_phase(str(message.get("match_phase", "lobby")), source="lobby_state")
                 self.expected_players = int(message.get("expected_players", 1))
                 self.host_id = str(message.get("host_id", ""))
                 self.can_start = bool(message.get("can_start", False))
@@ -311,12 +320,17 @@ class EasterClientApp:
                 self.local_predicted_player = None
                 self._sync_local_profile_from_lobby()
             elif message_type == "world_snapshot":
+                snapshot_round_id = int(message.get("round_id", self.snapshot.round_id))
                 snapshot_tick = int(message.get("tick", 0))
-                if snapshot_tick < self.snapshot.tick:
+                if snapshot_round_id < self.snapshot.round_id:
+                    continue
+                if snapshot_round_id == self.snapshot.round_id and snapshot_tick < self.snapshot.tick:
                     continue
                 self._load_map(str(message.get("map_id", "new_map")))
+                is_new_round = snapshot_round_id > self.snapshot.round_id
+                self.snapshot.round_id = snapshot_round_id
                 self.snapshot.tick = snapshot_tick
-                self.snapshot.match_phase = str(message.get("match_phase", "playing"))
+                self._set_match_phase(str(message.get("match_phase", "playing")), source="world_snapshot")
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.eggs = list(message.get("eggs", []))
                 self.snapshot.spirit_pickups = list(message.get("spirit_pickups", []))
@@ -334,6 +348,12 @@ class EasterClientApp:
                     except (TypeError, ValueError):
                         transport_seconds = None
                 self.diagnostics.record_world_snapshot(self.snapshot.tick, transport_seconds)
+                if is_new_round:
+                    self.render_positions.clear()
+                    self.local_predicted_player = None
+                    self._debug_log(
+                        f"accepted new round round_id={self.snapshot.round_id} tick={self.snapshot.tick}"
+                    )
                 self._reconcile_render_state()
             elif message_type == "udp_welcome":
                 if str(message.get("player_id", "")) == self.player_id:
@@ -356,8 +376,15 @@ class EasterClientApp:
             self.show_full_hud = not self.show_full_hud
             return screen
         if self.snapshot.match_phase in {"won", "lost"}:
-            if event.key == pg.K_RETURN and self.is_host:
+            if event.key in {pg.K_RETURN, pg.K_KP_ENTER}:
+                self._debug_log(
+                    "end-match Enter pressed "
+                    f"phase={self.snapshot.match_phase} player_id={self.player_id or '-'} "
+                    f"host_id={self.host_id or '-'} expected={self.expected_players} "
+                    f"connected={len(self.snapshot.players or [])}"
+                )
                 self.network.send({"type": "start_game"})
+                self._debug_log("sent start_game over TCP")
             return screen
         if self.snapshot.match_phase != "lobby":
             return screen
@@ -373,14 +400,27 @@ class EasterClientApp:
             self.selected_color_index = (self.selected_color_index + 1) % len(PLAYER_COLORS)
             self._send_profile_update()
             return screen
-        if event.key == pg.K_RETURN:
-            if self.is_host and self.can_start:
+        if event.key in {pg.K_RETURN, pg.K_KP_ENTER}:
+            if self.can_start:
+                self._debug_log(
+                    "lobby Enter pressed "
+                    f"player_id={self.player_id or '-'} host_id={self.host_id or '-'} can_start={self.can_start}"
+                )
                 self.network.send({"type": "start_game"})
+                self._debug_log("sent start_game over TCP")
             return screen
         if event.unicode and event.unicode.isprintable() and len(self.name_input) < 24:
             self.name_input += event.unicode
             self._send_profile_update()
         return screen
+
+    def _set_match_phase(self, new_phase: str, *, source: str) -> None:
+        previous_phase = self.snapshot.match_phase
+        self.snapshot.match_phase = new_phase
+        if self.diagnostics.enabled and previous_phase != new_phase:
+            self._debug_log(
+                f"phase {previous_phase} -> {new_phase} via {source} tick={self.snapshot.tick}"
+            )
 
     def _send_input(self, keys: pg.key.ScancodeWrapper) -> None:
         if not self.connected:
@@ -551,7 +591,7 @@ class EasterClientApp:
         self._draw_hazard_zones(screen, playfield_rect, camera_rect)
         self._draw_restoration_zones(screen, playfield_rect, camera_rect, small_font)
         self._draw_map_geometry(screen, playfield_rect, camera_rect)
-        self._draw_map_decorations(screen, playfield_rect, camera_rect)
+        self._draw_map_decorations(screen, playfield_rect, camera_rect, foreground_only=False)
         self._draw_enemy_spawners(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
@@ -603,6 +643,8 @@ class EasterClientApp:
             )
             render_visual_asset(screen, self.visual_assets["spirit_seed"], (pickup_x, pickup_y))
 
+        player_overlays: list[dict] = []
+
         for enemy in self.snapshot.enemies or []:
             display_x, display_y = self._display_position("enemy", str(enemy["id"]), float(enemy["x"]), float(enemy["y"]))
             if not self._world_point_visible(display_x, display_y, playfield_rect, camera_rect, margin=60):
@@ -645,13 +687,32 @@ class EasterClientApp:
                 ring_radius = max(ring_radius, int((self.visual_assets["player"].width * player_scale) / 2) + 2)
             if display_player["id"] == self.player_id:
                 pg.draw.circle(screen, SELF_RING_COLOR, (px, py), ring_radius, width=2)
-            name_surf = small_font.render(display_player["name"], True, TEXT_COLOR)
+
+            overlay_payload = {
+                "px": px,
+                "py": py,
+                "ring_radius": ring_radius,
+                "name": display_player["name"],
+                "state": display_player["state"],
+                "health": display_player["health"],
+                "max_health": display_player["max_health"],
+                "hazard_slow_multiplier": float(display_player.get("hazard_slow_multiplier", 1.0)),
+            }
+            player_overlays.append(overlay_payload)
+
+        self._draw_map_decorations(screen, playfield_rect, camera_rect, foreground_only=True)
+
+        for overlay in player_overlays:
+            px = int(overlay["px"])
+            py = int(overlay["py"])
+            ring_radius = int(overlay["ring_radius"])
+            name_surf = small_font.render(str(overlay["name"]), True, TEXT_COLOR)
             name_y = py - ring_radius - name_surf.get_height() - 6
             screen.blit(name_surf, (px - name_surf.get_width() // 2, name_y))
-            if display_player["state"] == "alive":
+            if overlay["state"] == "alive":
                 bar_width = 42
                 bar_height = 6
-                health_ratio = max(0.0, min(1.0, display_player["health"] / max(1, display_player["max_health"])))
+                health_ratio = max(0.0, min(1.0, float(overlay["health"]) / max(1, int(overlay["max_health"]))))
                 bar_rect = pg.Rect(px - bar_width // 2, py + ring_radius + 8, bar_width, bar_height)
                 pg.draw.rect(screen, HEALTH_BG_COLOR, bar_rect, border_radius=4)
                 pg.draw.rect(
@@ -660,7 +721,7 @@ class EasterClientApp:
                     pg.Rect(bar_rect.left, bar_rect.top, int(bar_width * health_ratio), bar_height),
                     border_radius=4,
                 )
-                if float(display_player.get("hazard_slow_multiplier", 1.0)) < 1.0:
+                if float(overlay["hazard_slow_multiplier"]) < 1.0:
                     pg.draw.circle(screen, HAZARD_OUTLINE_COLOR, (px, py), ring_radius + 6, width=2)
         screen.set_clip(None)
 
@@ -866,11 +927,20 @@ class EasterClientApp:
             label_surf = label_font.render(label, True, outline_color)
             screen.blit(label_surf, (screen_x - label_surf.get_width() // 2, screen_y - 10))
 
-    def _draw_map_decorations(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+    def _draw_map_decorations(
+        self,
+        screen: pg.Surface,
+        playfield_rect: pg.Rect,
+        camera_rect: pg.Rect,
+        *,
+        foreground_only: bool,
+    ) -> None:
         if self.current_map is None:
             return
 
         for decoration in self.current_map.decorations:
+            if bool(decoration.draw_above_entities) != foreground_only:
+                continue
             if not self._world_point_visible(decoration.x, decoration.y, playfield_rect, camera_rect, margin=96):
                 continue
             asset_id = self._decoration_asset_id(decoration)

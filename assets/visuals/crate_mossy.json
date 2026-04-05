@@ -1,0 +1,98 @@
+{
+  "asset_id": "crate_mossy",
+  "canvas": {
+    "width": 72,
+    "height": 64
+  },
+  "shapes": [
+    {
+      "kind": "rect",
+      "x": 12,
+      "y": 12,
+      "width": 48,
+      "height": 40,
+      "fill": [156, 116, 74],
+      "outline": [92, 65, 41],
+      "outline_width": 3
+    },
+    {
+      "kind": "rect",
+      "x": 16,
+      "y": 16,
+      "width": 40,
+      "height": 8,
+      "fill": [179, 137, 92],
+      "outline": [118, 83, 53],
+      "outline_width": 2
+    },
+    {
+      "kind": "rect",
+      "x": 16,
+      "y": 28,
+      "width": 40,
+      "height": 8,
+      "fill": [168, 125, 80],
+      "outline": [118, 83, 53],
+      "outline_width": 2
+    },
+    {
+      "kind": "rect",
+      "x": 16,
+      "y": 40,
+      "width": 40,
+      "height": 8,
+      "fill": [158, 117, 74],
+      "outline": [118, 83, 53],
+      "outline_width": 2
+    },
+    {
+      "kind": "line",
+      "x": 24,
+      "y": 14,
+      "x2": 24,
+      "y2": 50,
+      "outline": [101, 70, 45],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 48,
+      "y": 14,
+      "x2": 48,
+      "y2": 50,
+      "outline": [101, 70, 45],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 16,
+      "y": 16,
+      "x2": 56,
+      "y2": 48,
+      "outline": [211, 174, 124],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 17,
+      "y": 18,
+      "width": 14,
+      "height": 9,
+      "fill": [118, 145, 89],
+      "outline": [86, 109, 61],
+      "outline_width": 2,
+      "rotation_degrees": -12
+    },
+    {
+      "kind": "ellipse",
+      "x": 40,
+      "y": 35,
+      "width": 13,
+      "height": 8,
+      "fill": [121, 149, 92],
+      "outline": [86, 109, 61],
+      "outline_width": 2,
+      "rotation_degrees": 16
+    }
+  ]
+}

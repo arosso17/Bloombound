@@ -769,6 +769,96 @@
       "x": 544,
       "y": 480,
       "scale": 1.0
+    },
+    {
+      "decoration_id": "egg_hide_hub_restore",
+      "asset_id": "crate_mossy",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 770.0,
+      "y": 422.0,
+      "scale": 0.92
+    },
+    {
+      "decoration_id": "egg_hide_hub_revive",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 376.0,
+      "y": 688.0,
+      "scale": 1.1
+    },
+    {
+      "decoration_id": "egg_hide_orchard_restore",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "draw_above_entities": true,
+      "x": 1032.0,
+      "y": 424.0,
+      "scale": 0.94
+    },
+    {
+      "decoration_id": "egg_hide_glass_restore",
+      "asset_id": "crate_tall",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 1888.0,
+      "y": 410.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "egg_hide_glass_restore_side",
+      "asset_id": "crate_broken",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 1922.0,
+      "y": 436.0,
+      "scale": 0.88
+    },
+    {
+      "decoration_id": "egg_hide_glass_revive",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "draw_above_entities": true,
+      "x": 1720.0,
+      "y": 840.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "egg_hide_corridor_restore",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 900.0,
+      "y": 1026.0,
+      "scale": 1.12
+    },
+    {
+      "decoration_id": "egg_hide_south_revive",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "draw_above_entities": true,
+      "x": 1030.0,
+      "y": 1814.0,
+      "scale": 0.98
+    },
+    {
+      "decoration_id": "egg_hide_south_restore",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "draw_above_entities": true,
+      "x": 1512.0,
+      "y": 1806.0,
+      "scale": 1.16
+    },
+    {
+      "decoration_id": "egg_hide_south_restore_crate",
+      "asset_id": "crate_broken",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 1462.0,
+      "y": 1828.0,
+      "scale": 0.84
     }
   ],
   "patrol_points": [

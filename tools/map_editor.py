@@ -83,6 +83,7 @@ class MapEditor:
             "alert_duration_ticks": tk.StringVar(value=""),
             "asset_id": tk.StringVar(value=""),
             "restored_by_zone_id": tk.StringVar(value=""),
+            "draw_above_entities": tk.StringVar(value=""),
             "enemy_id": tk.StringVar(value=""),
             "required_egg_type": tk.StringVar(value=""),
             "restore_cost": tk.StringVar(value=""),
@@ -356,6 +357,7 @@ class MapEditor:
             ("alert_duration_ticks", "Alert Ticks"),
             ("asset_id", "Asset ID"),
             ("restored_by_zone_id", "Restored By Zone"),
+            ("draw_above_entities", "Draw Above Items"),
             ("enemy_id", "Enemy ID"),
             ("required_egg_type", "Needs Egg Type"),
             ("restore_cost", "Restore Cost"),
@@ -505,6 +507,7 @@ class MapEditor:
                 obj["asset_id"] = self.property_vars["asset_id"].get().strip() or obj["asset_id"]
                 self.decoration_asset_var.set(obj["asset_id"])
                 obj["restored_by_zone_id"] = self.property_vars["restored_by_zone_id"].get().strip()
+                obj["draw_above_entities"] = self._parse_bool_var("draw_above_entities")
                 obj["scale"] = max(0.1, self._parse_float_var("scale"))
             elif section == "patrol_points":
                 obj["point_id"] = self.property_vars["id"].get().strip() or obj["point_id"]
@@ -705,7 +708,8 @@ class MapEditor:
             barrier_kind = "Spirit" if barrier.get("spirit_passable", False) else "Solid"
             labels.append((("traversal_barriers", index), f"Barrier: {barrier['barrier_id']} ({barrier_kind})"))
         for index, decoration in enumerate(self.map_data["decorations"]):
-            labels.append((("decorations", index), f"Decoration: {decoration['decoration_id']} ({decoration['asset_id']})"))
+            layer_tag = " FG" if decoration.get("draw_above_entities", False) else ""
+            labels.append((("decorations", index), f"Decoration: {decoration['decoration_id']} ({decoration['asset_id']}{layer_tag})"))
         for index, point in enumerate(self.map_data["patrol_points"]):
             labels.append((("patrol_points", index), f"Patrol: {point['point_id']} -> {point['enemy_id']}"))
         for index, _spawn in enumerate(self.map_data["player_spawns"]):
@@ -769,6 +773,7 @@ class MapEditor:
         self._set_property("alert_duration_ticks", obj.get("alert_duration_ticks", 80 if section == "enemy_spawns" else ""))
         self._set_property("asset_id", obj.get("asset_id", ""))
         self._set_property("restored_by_zone_id", obj.get("restored_by_zone_id", ""))
+        self._set_property("draw_above_entities", obj.get("draw_above_entities", ""))
         self._set_property("enemy_id", obj.get("enemy_id", ""))
         self._set_property("required_egg_type", obj.get("required_egg_type", ""))
         self._set_property("restore_cost", obj.get("restore_cost", ""))
@@ -930,8 +935,11 @@ class MapEditor:
     def _draw_decoration_marker(self, index: int, decoration: dict) -> None:
         x, y = self._world_to_screen(decoration["x"], decoration["y"])
         size = max(12, int(14 * float(decoration.get("scale", 1.0))))
-        self.canvas.create_rectangle(x - size, y - size, x + size, y + size, fill="#d89b5f", outline="#6d4320", width=2)
-        self.canvas.create_text(x, y - size - 10, text="D", fill="#203040")
+        fill = "#d89b5f" if not decoration.get("draw_above_entities", False) else "#d58965"
+        outline = "#6d4320" if not decoration.get("draw_above_entities", False) else "#84422a"
+        label = "D" if not decoration.get("draw_above_entities", False) else "FG"
+        self.canvas.create_rectangle(x - size, y - size, x + size, y + size, fill=fill, outline=outline, width=2)
+        self.canvas.create_text(x, y - size - 10, text=label, fill="#203040")
         self.canvas.create_text(x, y + size + 10, text=decoration.get("asset_id", ""), fill="#6d4320")
 
     def _draw_radius_marker(self, obj: dict, fill: str, label: str) -> None:
@@ -1150,6 +1158,7 @@ class MapEditor:
                     "decoration_id": self._next_id("decorations", "decoration_id", "decoration"),
                     "asset_id": self._default_asset_id(),
                     "restored_by_zone_id": "",
+                    "draw_above_entities": False,
                     "x": world_x,
                     "y": world_y,
                     "scale": 1.0,

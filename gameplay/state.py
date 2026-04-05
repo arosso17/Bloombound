@@ -44,6 +44,7 @@ def distance(ax: float, ay: float, bx: float, by: float) -> float:
 class GameState:
     def __init__(self, expected_players: int = 2, map_id: str = "new_map") -> None:
         self.map = load_map(map_id)
+        self.round_id = 0
         self.tick = 0
         self.expected_players = max(1, expected_players)
         self.match_phase = "lobby"
@@ -112,6 +113,7 @@ class GameState:
             return False
         if len(self.players) < self.expected_players:
             return False
+        self.round_id += 1
         self.match_phase = "playing"
         self.tick = 0
         self.final_bloom.restored = False
@@ -152,6 +154,7 @@ class GameState:
             )
         return {
             "type": "lobby_state",
+            "round_id": self.round_id,
             "match_phase": self.match_phase,
             "map_id": self.map_id,
             "expected_players": self.expected_players,
@@ -200,6 +203,7 @@ class GameState:
     def build_snapshot(self) -> dict:
         return {
             "type": "world_snapshot",
+            "round_id": self.round_id,
             "tick": self.tick,
             "map_id": self.map_id,
             "match_phase": self.match_phase,
