@@ -1,0 +1,975 @@
+{
+  "map_id": "thornmere_pilgrimage",
+  "name": "Thornmere Pilgrimage",
+  "world": {
+    "width": 2200,
+    "height": 1800
+  },
+  "player_spawns": [
+    {
+      "x": 256.0,
+      "y": 256.0
+    },
+    {
+      "x": 332.0,
+      "y": 256.0
+    },
+    {
+      "x": 256.0,
+      "y": 332.0
+    },
+    {
+      "x": 332.0,
+      "y": 332.0
+    }
+  ],
+  "collision_rects": [
+    {
+      "rect_id": "north_outer",
+      "x": 100.0,
+      "y": 100.0,
+      "width": 2000.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "west_outer",
+      "x": 100.0,
+      "y": 100.0,
+      "width": 40.0,
+      "height": 1600.0
+    },
+    {
+      "rect_id": "east_outer",
+      "x": 2060.0,
+      "y": 100.0,
+      "width": 40.0,
+      "height": 1600.0
+    },
+    {
+      "rect_id": "south_outer",
+      "x": 100.0,
+      "y": 1660.0,
+      "width": 2000.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_east_top",
+      "x": 620.0,
+      "y": 140.0,
+      "width": 40.0,
+      "height": 180.0
+    },
+    {
+      "rect_id": "hub_east_bottom",
+      "x": 620.0,
+      "y": 440.0,
+      "width": 40.0,
+      "height": 180.0
+    },
+    {
+      "rect_id": "hub_south",
+      "x": 140.0,
+      "y": 620.0,
+      "width": 520.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_corridor_top",
+      "x": 620.0,
+      "y": 280.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_corridor_bottom",
+      "x": 620.0,
+      "y": 440.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_planter",
+      "x": 392.0,
+      "y": 430.0,
+      "width": 110.0,
+      "height": 110.0
+    },
+    {
+      "rect_id": "orchard_north",
+      "x": 800.0,
+      "y": 140.0,
+      "width": 560.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_west_top",
+      "x": 800.0,
+      "y": 140.0,
+      "width": 40.0,
+      "height": 180.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_west_bottom",
+      "x": 800.0,
+      "y": 440.0,
+      "width": 40.0,
+      "height": 340.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_south",
+      "x": 800.0,
+      "y": 740.0,
+      "width": 560.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_east_top",
+      "x": 1320.0,
+      "y": 140.0,
+      "width": 40.0,
+      "height": 240.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_east_bottom",
+      "x": 1320.0,
+      "y": 560.0,
+      "width": 40.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_corridor_top",
+      "x": 1320.0,
+      "y": 380.0,
+      "width": 200.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_corridor_bottom",
+      "x": 1320.0,
+      "y": 560.0,
+      "width": 200.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_bed_a",
+      "x": 930.0,
+      "y": 248.0,
+      "width": 140.0,
+      "height": 92.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_bed_b",
+      "x": 1080.0,
+      "y": 566.0,
+      "width": 120.0,
+      "height": 92.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "conservatory_north",
+      "x": 1520.0,
+      "y": 140.0,
+      "width": 520.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_west_top",
+      "x": 1520.0,
+      "y": 140.0,
+      "width": 40.0,
+      "height": 240.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_west_bottom",
+      "x": 1520.0,
+      "y": 560.0,
+      "width": 40.0,
+      "height": 300.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_east",
+      "x": 2000.0,
+      "y": 140.0,
+      "width": 40.0,
+      "height": 720.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_south_left",
+      "x": 1520.0,
+      "y": 820.0,
+      "width": 160.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_south_right",
+      "x": 1800.0,
+      "y": 820.0,
+      "width": 240.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_drop_left",
+      "x": 1640.0,
+      "y": 820.0,
+      "width": 40.0,
+      "height": 240.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_drop_right",
+      "x": 1800.0,
+      "y": 820.0,
+      "width": 40.0,
+      "height": 240.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_bed_a",
+      "x": 1640.0,
+      "y": 258.0,
+      "width": 120.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "conservatory_bed_b",
+      "x": 1808.0,
+      "y": 540.0,
+      "width": 112.0,
+      "height": 178.0,
+      "restored_by_zone_id": "restore_conservatory"
+    },
+    {
+      "rect_id": "marsh_north_left",
+      "x": 1360.0,
+      "y": 1020.0,
+      "width": 320.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_north_right",
+      "x": 1800.0,
+      "y": 1020.0,
+      "width": 240.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_east",
+      "x": 2000.0,
+      "y": 1020.0,
+      "width": 40.0,
+      "height": 640.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_south",
+      "x": 1360.0,
+      "y": 1620.0,
+      "width": 680.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_west_top",
+      "x": 1360.0,
+      "y": 1020.0,
+      "width": 40.0,
+      "height": 180.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_west_bottom",
+      "x": 1360.0,
+      "y": 1320.0,
+      "width": 40.0,
+      "height": 340.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_heart_top",
+      "x": 1280.0,
+      "y": 1160.0,
+      "width": 120.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_heart_bottom",
+      "x": 1280.0,
+      "y": 1320.0,
+      "width": 120.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "marsh_island",
+      "x": 1636.0,
+      "y": 1260.0,
+      "width": 136.0,
+      "height": 160.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_north",
+      "x": 760.0,
+      "y": 1040.0,
+      "width": 520.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_east_top",
+      "x": 1280.0,
+      "y": 1040.0,
+      "width": 40.0,
+      "height": 160.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_east_bottom",
+      "x": 1280.0,
+      "y": 1320.0,
+      "width": 40.0,
+      "height": 340.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_south",
+      "x": 760.0,
+      "y": 1620.0,
+      "width": 520.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_west_top",
+      "x": 720.62,
+      "y": 1040.0,
+      "width": 79.38,
+      "height": 139.95,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_west_bottom",
+      "x": 720.71,
+      "y": 1360.38,
+      "width": 79.29,
+      "height": 299.62,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "heart_pedestal",
+      "x": 980.0,
+      "y": 1250.0,
+      "width": 84.0,
+      "height": 84.0,
+      "restored_by_zone_id": "restore_marsh"
+    },
+    {
+      "rect_id": "grotto_north",
+      "x": 180.0,
+      "y": 960.0,
+      "width": 540.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grotto_west",
+      "x": 180.0,
+      "y": 960.0,
+      "width": 40.0,
+      "height": 600.0
+    },
+    {
+      "rect_id": "grotto_south",
+      "x": 180.0,
+      "y": 1520.0,
+      "width": 540.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grotto_east_top",
+      "x": 680.0,
+      "y": 960.0,
+      "width": 40.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "grotto_east_bottom",
+      "x": 680.0,
+      "y": 1360.0,
+      "width": 40.0,
+      "height": 200.0
+    },
+    {
+      "rect_id": "grotto_stone_a",
+      "x": 328.0,
+      "y": 1094.0,
+      "width": 98.0,
+      "height": 84.0
+    },
+    {
+      "rect_id": "grotto_stone_b",
+      "x": 488.0,
+      "y": 1324.0,
+      "width": 102.0,
+      "height": 88.0
+    }
+  ],
+  "traversal_barriers": [
+    {
+      "barrier_id": "conservatory_gate",
+      "x": 1400.0,
+      "y": 420.0,
+      "width": 40.0,
+      "height": 140.0,
+      "cleared_by_zone_id": "restore_orchard",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "marsh_gate",
+      "x": 1680.0,
+      "y": 980.0,
+      "width": 120.0,
+      "height": 40.0,
+      "cleared_by_zone_id": "restore_conservatory",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "heart_gate",
+      "x": 1320.0,
+      "y": 1200.0,
+      "width": 40.0,
+      "height": 120.0,
+      "cleared_by_zone_id": "restore_marsh",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "grotto_spirit_barrier",
+      "x": 680.0,
+      "y": 1180.0,
+      "width": 40.0,
+      "height": 180.0,
+      "cleared_by_zone_id": "",
+      "spirit_passable": true
+    }
+  ],
+  "decorations": [
+    {
+      "decoration_id": "hub_bush_a",
+      "asset_id": "dead_bush",
+      "x": 214.0,
+      "y": 478.0,
+      "scale": 1.08
+    },
+    {
+      "decoration_id": "hub_flower_a",
+      "asset_id": "dead_flower",
+      "x": 286.0,
+      "y": 534.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "hub_tulip_a",
+      "asset_id": "dead_tulip",
+      "x": 542.0,
+      "y": 516.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "orchard_reeds_a",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 900.0,
+      "y": 666.0,
+      "scale": 0.92
+    },
+    {
+      "decoration_id": "orchard_reeds_b",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1206.0,
+      "y": 330.0,
+      "scale": 0.86
+    },
+    {
+      "decoration_id": "orchard_bush_a",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1170.0,
+      "y": 664.0,
+      "scale": 1.18
+    },
+    {
+      "decoration_id": "orchard_hide_egg",
+      "asset_id": "crate_mossy",
+      "draw_above_entities": true,
+      "x": 890.0,
+      "y": 370.0,
+      "scale": 0.9
+    },
+    {
+      "decoration_id": "orchard_hide_spare",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "draw_above_entities": true,
+      "x": 1144.0,
+      "y": 700.0,
+      "scale": 0.94
+    },
+    {
+      "decoration_id": "conservatory_bush_a",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_conservatory",
+      "x": 1868.0,
+      "y": 298.0,
+      "scale": 1.1
+    },
+    {
+      "decoration_id": "conservatory_flower_a",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_conservatory",
+      "x": 1606.0,
+      "y": 724.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "conservatory_reeds_a",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_conservatory",
+      "x": 1932.0,
+      "y": 732.0,
+      "scale": 0.92
+    },
+    {
+      "decoration_id": "conservatory_hide_restore",
+      "asset_id": "crate_tall",
+      "draw_above_entities": true,
+      "x": 1894.0,
+      "y": 418.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "conservatory_hide_revive",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_conservatory",
+      "draw_above_entities": true,
+      "x": 1682.0,
+      "y": 844.0,
+      "scale": 0.94
+    },
+    {
+      "decoration_id": "marsh_reeds_a",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_marsh",
+      "x": 1490.0,
+      "y": 1174.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "marsh_reeds_b",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_marsh",
+      "x": 1862.0,
+      "y": 1518.0,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "marsh_bush_a",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_marsh",
+      "x": 1498.0,
+      "y": 1498.0,
+      "scale": 1.2
+    },
+    {
+      "decoration_id": "marsh_flower_a",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_marsh",
+      "x": 1760.0,
+      "y": 1492.0,
+      "scale": 0.72
+    },
+    {
+      "decoration_id": "marsh_hide_restore",
+      "asset_id": "crate_broken",
+      "draw_above_entities": true,
+      "x": 1860.0,
+      "y": 1458.0,
+      "scale": 0.88
+    },
+    {
+      "decoration_id": "marsh_hide_revive",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_marsh",
+      "draw_above_entities": true,
+      "x": 1516.0,
+      "y": 1488.0,
+      "scale": 1.12
+    },
+    {
+      "decoration_id": "heart_reeds_a",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_marsh",
+      "x": 904.0,
+      "y": 1496.0,
+      "scale": 0.88
+    },
+    {
+      "decoration_id": "heart_flower_a",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_marsh",
+      "x": 1162.0,
+      "y": 1490.0,
+      "scale": 0.72
+    },
+    {
+      "decoration_id": "heart_hide_final",
+      "asset_id": "crate_mossy",
+      "draw_above_entities": true,
+      "x": 936.0,
+      "y": 1478.0,
+      "scale": 0.92
+    },
+    {
+      "decoration_id": "grotto_bush_a",
+      "asset_id": "dead_bush",
+      "x": 284.0,
+      "y": 1038.0,
+      "scale": 1.16
+    },
+    {
+      "decoration_id": "grotto_reeds_a",
+      "asset_id": "dead_reeds",
+      "x": 584.0,
+      "y": 1456.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "grotto_tulip_a",
+      "asset_id": "dead_tulip",
+      "x": 364.0,
+      "y": 1422.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "ground_sprout_a",
+      "asset_id": "grass_sprout",
+      "x": 1048.0,
+      "y": 844.0,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "ground_sprout_b",
+      "asset_id": "grass_sprout",
+      "x": 1720.0,
+      "y": 910.0,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "ground_sprout_c",
+      "asset_id": "grass_sprout",
+      "x": 1260.0,
+      "y": 928.0,
+      "scale": 1.0
+    }
+  ],
+  "patrol_points": [
+    {
+      "point_id": "orchard_patrol_a",
+      "enemy_id": "thornmere_orchard",
+      "x": 920.0,
+      "y": 318.0
+    },
+    {
+      "point_id": "orchard_patrol_b",
+      "enemy_id": "thornmere_orchard",
+      "x": 1188.0,
+      "y": 650.0
+    },
+    {
+      "point_id": "conservatory_patrol_a",
+      "enemy_id": "thornmere_conservatory",
+      "x": 1658.0,
+      "y": 314.0
+    },
+    {
+      "point_id": "conservatory_patrol_b",
+      "enemy_id": "thornmere_conservatory",
+      "x": 1902.0,
+      "y": 744.0
+    },
+    {
+      "point_id": "marsh_patrol_a",
+      "enemy_id": "thornmere_marsh",
+      "x": 1498.0,
+      "y": 1162.0
+    },
+    {
+      "point_id": "marsh_patrol_b",
+      "enemy_id": "thornmere_marsh",
+      "x": 1866.0,
+      "y": 1508.0
+    }
+  ],
+  "egg_spawns": [
+    {
+      "spawn_id": "orchard_entry_restore",
+      "x": 878.0,
+      "y": 382.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "hub_revive_a",
+      "x": 360.0,
+      "y": 520.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "orchard_spare_restore",
+      "x": 1132.0,
+      "y": 712.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "conservatory_restore",
+      "x": 1892.0,
+      "y": 426.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "conservatory_revive",
+      "x": 1672.0,
+      "y": 852.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "marsh_restore",
+      "x": 1848.0,
+      "y": 1468.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "marsh_revive",
+      "x": 1504.0,
+      "y": 1502.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "heart_final_restore",
+      "x": 930.0,
+      "y": 1486.0,
+      "egg_type": "restoration"
+    }
+  ],
+  "spirit_pickups": [
+    {
+      "pickup_id": "grotto_seed_a",
+      "x": 310.0,
+      "y": 1118.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "grotto_seed_b",
+      "x": 550.0,
+      "y": 1266.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "grotto_seed_c",
+      "x": 366.0,
+      "y": 1440.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "grotto_seed_d",
+      "x": 590.0,
+      "y": 1118.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "grotto_seed_e",
+      "x": 472.0,
+      "y": 1368.0,
+      "radius": 12
+    }
+  ],
+  "restoration_zones": [
+    {
+      "zone_id": "restore_orchard",
+      "x": 1082.0,
+      "y": 512.0,
+      "radius": 88.0,
+      "interact_radius": 108.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_conservatory",
+      "x": 1766.0,
+      "y": 620.0,
+      "radius": 92.0,
+      "interact_radius": 112.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_marsh",
+      "x": 1700.0,
+      "y": 1360.0,
+      "radius": 100.0,
+      "interact_radius": 122.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    }
+  ],
+  "hazard_zones": [
+    {
+      "zone_id": "hazard_orchard",
+      "x": 1080.0,
+      "y": 410.0,
+      "radius": 126.0,
+      "damage_per_second": 16.0,
+      "slow_multiplier": 0.8,
+      "cleared_by_zone_id": "restore_orchard"
+    },
+    {
+      "zone_id": "hazard_conservatory",
+      "x": 1766.0,
+      "y": 500.0,
+      "radius": 150.0,
+      "damage_per_second": 20.0,
+      "slow_multiplier": 0.74,
+      "cleared_by_zone_id": "restore_conservatory"
+    },
+    {
+      "zone_id": "hazard_marsh",
+      "x": 1700.0,
+      "y": 1328.0,
+      "radius": 172.0,
+      "damage_per_second": 22.0,
+      "slow_multiplier": 0.7,
+      "cleared_by_zone_id": "restore_marsh"
+    }
+  ],
+  "shrine": {
+    "shrine_id": "shrine_hub",
+    "x": 300.0,
+    "y": 300.0,
+    "interact_radius": 54,
+    "revive_radius": 72
+  },
+  "enemy_spawns": [
+    {
+      "enemy_id": "thornmere_orchard",
+      "x": 1088.0,
+      "y": 420.0,
+      "radius": 18.0,
+      "speed": 146.0,
+      "damage_per_second": 40.0,
+      "leash_radius": 250.0,
+      "aggro_radius": 210.0,
+      "alert_duration_ticks": 80
+    },
+    {
+      "enemy_id": "thornmere_conservatory",
+      "x": 1878.0,
+      "y": 398.0,
+      "radius": 18.0,
+      "speed": 152.0,
+      "damage_per_second": 42.0,
+      "leash_radius": 300.0,
+      "aggro_radius": 220.0,
+      "alert_duration_ticks": 84
+    },
+    {
+      "enemy_id": "thornmere_marsh",
+      "x": 1512.0,
+      "y": 1184.0,
+      "radius": 18.0,
+      "speed": 150.0,
+      "damage_per_second": 42.0,
+      "leash_radius": 330.0,
+      "aggro_radius": 235.0,
+      "alert_duration_ticks": 88
+    },
+    {
+      "enemy_id": "thornmere_heart_north",
+      "x": 1020.0,
+      "y": 1128.0,
+      "radius": 18.0,
+      "speed": 158.0,
+      "damage_per_second": 44.0,
+      "leash_radius": 180.0,
+      "aggro_radius": 180.0,
+      "alert_duration_ticks": 84
+    },
+    {
+      "enemy_id": "thornmere_heart_west",
+      "x": 872.0,
+      "y": 1220.0,
+      "radius": 18.0,
+      "speed": 158.0,
+      "damage_per_second": 44.0,
+      "leash_radius": 180.0,
+      "aggro_radius": 180.0,
+      "alert_duration_ticks": 84
+    },
+    {
+      "enemy_id": "thornmere_heart_east",
+      "x": 1168.0,
+      "y": 1220.0,
+      "radius": 18.0,
+      "speed": 158.0,
+      "damage_per_second": 44.0,
+      "leash_radius": 180.0,
+      "aggro_radius": 180.0,
+      "alert_duration_ticks": 84
+    },
+    {
+      "enemy_id": "thornmere_heart_south_west",
+      "x": 900.0,
+      "y": 1480.0,
+      "radius": 18.0,
+      "speed": 160.0,
+      "damage_per_second": 46.0,
+      "leash_radius": 190.0,
+      "aggro_radius": 185.0,
+      "alert_duration_ticks": 88
+    },
+    {
+      "enemy_id": "thornmere_heart_south_east",
+      "x": 1140.0,
+      "y": 1480.0,
+      "radius": 18.0,
+      "speed": 160.0,
+      "damage_per_second": 46.0,
+      "leash_radius": 190.0,
+      "aggro_radius": 185.0,
+      "alert_duration_ticks": 88
+    }
+  ],
+  "final_bloom": {
+    "bloom_id": "thornmere_heart_bloom",
+    "x": 1020.0,
+    "y": 1390.0,
+    "radius": 26,
+    "interact_radius": 74
+  }
+}

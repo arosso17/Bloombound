@@ -192,6 +192,9 @@ class FinalBloomState:
     radius: int = 24
     interact_radius: int = 68
     restored: bool = False
+    channel_duration_seconds: float = 3.0
+    channel_player_id: str = ""
+    channel_progress_seconds: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -201,4 +204,7 @@ class FinalBloomState:
             "radius": self.radius,
             "interact_radius": self.interact_radius,
             "restored": self.restored,
+            "channel_duration_seconds": round(self.channel_duration_seconds, 2),
+            "channel_player_id": self.channel_player_id,
+            "channel_progress_seconds": round(self.channel_progress_seconds, 2),
         }

@@ -117,6 +117,8 @@ class GameState:
         self.match_phase = "playing"
         self.tick = 0
         self.final_bloom.restored = False
+        self.final_bloom.channel_player_id = ""
+        self.final_bloom.channel_progress_seconds = 0.0
         self._reset_eggs()
         self._reset_spirit_pickups()
         self._reset_restoration_zones()
@@ -187,6 +189,7 @@ class GameState:
             self._update_player(player, dt)
         self._update_environment_effects(dt)
         self._update_enemies(dt)
+        self._update_final_bloom_channel(dt)
         for player in self.players.values():
             player.prev_input_state = PlayerInput(
                 move_x=player.input_state.move_x,
@@ -259,7 +262,7 @@ class GameState:
             if not self._try_revive(player):
                 if not self._try_cleanse_enemy_spawn(player):
                     if not self._try_restore_zone(player):
-                        self._try_restore_final_bloom(player)
+                        pass
 
     def _update_environment_effects(self, dt: float) -> None:
         for player in self.players.values():
@@ -481,18 +484,56 @@ class GameState:
             return True
         return False
 
-    def _try_restore_final_bloom(self, player: PlayerState) -> bool:
-        bloom_egg_type = self._final_bloom_egg_type()
-        if player.state != "alive" or not self._has_eggs(player, bloom_egg_type, 1):
-            return False
-        if distance(player.x, player.y, self.final_bloom.x, self.final_bloom.y) > self.final_bloom.interact_radius:
-            return False
+    def _update_final_bloom_channel(self, dt: float) -> None:
+        if self.final_bloom.restored:
+            return
         if any(not zone.restored for zone in self.restoration_zones):
-            return False
+            self.final_bloom.channel_player_id = ""
+            self.final_bloom.channel_progress_seconds = 0.0
+            return
 
-        self._consume_carried_eggs(player, bloom_egg_type, 1)
+        bloom_egg_type = self._final_bloom_egg_type()
+        channeling_candidates = [
+            player
+            for player in self.players.values()
+            if player.state == "alive"
+            and player.input_state.interact
+            and self._has_eggs(player, bloom_egg_type, 1)
+            and distance(player.x, player.y, self.final_bloom.x, self.final_bloom.y) <= self.final_bloom.interact_radius
+        ]
+        if not channeling_candidates:
+            self.final_bloom.channel_player_id = ""
+            self.final_bloom.channel_progress_seconds = 0.0
+            return
+
+        if self.final_bloom.channel_player_id:
+            active_player = next(
+                (player for player in channeling_candidates if player.player_id == self.final_bloom.channel_player_id),
+                None,
+            )
+        else:
+            active_player = None
+
+        if active_player is None:
+            active_player = min(
+                channeling_candidates,
+                key=lambda player: distance(player.x, player.y, self.final_bloom.x, self.final_bloom.y),
+            )
+            if active_player.player_id != self.final_bloom.channel_player_id:
+                self.final_bloom.channel_player_id = active_player.player_id
+                self.final_bloom.channel_progress_seconds = 0.0
+
+        self.final_bloom.channel_player_id = active_player.player_id
+        self.final_bloom.channel_progress_seconds = min(
+            self.final_bloom.channel_duration_seconds,
+            self.final_bloom.channel_progress_seconds + dt,
+        )
+        if self.final_bloom.channel_progress_seconds < self.final_bloom.channel_duration_seconds:
+            return
+
+        self._consume_carried_eggs(active_player, bloom_egg_type, 1)
         self.final_bloom.restored = True
-        return True
+        self.final_bloom.channel_progress_seconds = self.final_bloom.channel_duration_seconds
 
     def _try_cleanse_enemy_spawn(self, player: PlayerState) -> bool:
         if player.state != "alive" or player.spirit_seeds <= 0:
@@ -791,8 +832,8 @@ class GameState:
         if unrestored_count > 0:
             return f"Restore the garden circles with restoration eggs. Zones left: {unrestored_count}."
         if any(not egg.collected for egg in self.eggs):
-            return f"Gather the remaining eggs and bring a {self._final_bloom_egg_type()} egg to the Heart Bloom."
-        return f"All zones are restored. Bring a {self._final_bloom_egg_type()} egg to the Heart Bloom."
+            return f"Gather the remaining eggs and hold interact at the Heart Bloom for 3 seconds with a {self._final_bloom_egg_type()} egg."
+        return f"All zones are restored. Hold interact at the Heart Bloom for 3 seconds with a {self._final_bloom_egg_type()} egg."
 
     def _final_bloom_egg_type(self) -> str:
         if self.restoration_zones or any(egg.egg_type == "restoration" for egg in self.eggs):

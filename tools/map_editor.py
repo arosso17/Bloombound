@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 import json
+import sys
 import tkinter as tk
 from copy import deepcopy
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+import pygame as pg
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from gameplay.visual_assets import load_visual_asset, render_visual_asset
 MAPS_DIR = REPO_ROOT / "gameplay" / "maps"
 VISUALS_DIR = REPO_ROOT / "assets" / "visuals"
+MAP_PREVIEW_DIR = REPO_ROOT / "assets" / "map_previews"
 
 DEFAULT_MAP = {
     "map_id": "new_map",
@@ -231,21 +238,22 @@ class MapEditor:
         ttk.Button(file_row, text="Open", command=self.open_map_dialog).grid(row=0, column=1, padx=4)
         ttk.Button(file_row, text="Save", command=self.save_map).grid(row=0, column=2, padx=4)
         ttk.Button(file_row, text="Save As", command=self.save_map_as).grid(row=0, column=3, padx=(4, 0))
+        ttk.Button(parent, text="Export Preview", command=self.export_map_preview).grid(row=1, column=0, sticky="ew", pady=(8, 0))
 
         maps_header = ttk.Frame(parent)
-        maps_header.grid(row=1, column=0, sticky="ew", pady=(10, 0))
+        maps_header.grid(row=2, column=0, sticky="ew", pady=(10, 0))
         ttk.Label(maps_header, text="Maps In Folder").grid(row=0, column=0, sticky="w")
         ttk.Button(maps_header, text="Refresh", command=self.refresh_map_files).grid(row=0, column=1, sticky="e", padx=(8, 0))
 
         self.map_files_listbox = tk.Listbox(parent, height=8, exportselection=False)
-        self.map_files_listbox.grid(row=2, column=0, sticky="ew", pady=(4, 10))
+        self.map_files_listbox.grid(row=3, column=0, sticky="ew", pady=(4, 10))
         self.map_files_listbox.bind("<Double-Button-1>", lambda _event: self.open_selected_map_file())
 
-        ttk.Button(parent, text="Open Selected", command=self.open_selected_map_file).grid(row=3, column=0, sticky="ew")
+        ttk.Button(parent, text="Open Selected", command=self.open_selected_map_file).grid(row=4, column=0, sticky="ew")
 
-        ttk.Label(parent, text="Tools").grid(row=4, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Tools").grid(row=5, column=0, sticky="w", pady=(12, 4))
         tools_frame = ttk.Frame(parent)
-        tools_frame.grid(row=5, column=0, sticky="ew")
+        tools_frame.grid(row=6, column=0, sticky="ew")
 
         tool_specs = [
             ("select", "Select"),
@@ -265,20 +273,20 @@ class MapEditor:
         for index, (value, label) in enumerate(tool_specs):
             ttk.Radiobutton(tools_frame, text=label, variable=self.tool_var, value=value).grid(row=index, column=0, sticky="w", pady=2)
 
-        ttk.Checkbutton(parent, text="Snap To Grid", variable=self.snap_to_grid_var).grid(row=6, column=0, sticky="w", pady=(10, 4))
+        ttk.Checkbutton(parent, text="Snap To Grid", variable=self.snap_to_grid_var).grid(row=7, column=0, sticky="w", pady=(10, 4))
 
-        ttk.Label(parent, text="Decoration Asset").grid(row=7, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Decoration Asset").grid(row=8, column=0, sticky="w", pady=(12, 4))
         self.decoration_asset_combo = ttk.Combobox(
             parent,
             textvariable=self.decoration_asset_var,
             state="readonly",
             height=12,
         )
-        self.decoration_asset_combo.grid(row=8, column=0, sticky="ew")
+        self.decoration_asset_combo.grid(row=9, column=0, sticky="ew")
 
-        ttk.Label(parent, text="Layers").grid(row=9, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Layers").grid(row=10, column=0, sticky="w", pady=(12, 4))
         layers_frame = ttk.Frame(parent)
-        layers_frame.grid(row=10, column=0, sticky="ew")
+        layers_frame.grid(row=11, column=0, sticky="ew")
         layer_specs = [
             ("collision_rects", "Collision"),
             ("traversal_barriers", "Barriers"),
@@ -301,11 +309,11 @@ class MapEditor:
                 command=self._draw_canvas,
             ).grid(row=index, column=0, sticky="w", pady=1)
 
-        ttk.Label(parent, text="Objects").grid(row=11, column=0, sticky="w", pady=(12, 4))
+        ttk.Label(parent, text="Objects").grid(row=12, column=0, sticky="w", pady=(12, 4))
         self.object_listbox = tk.Listbox(parent, height=20, exportselection=False)
-        self.object_listbox.grid(row=12, column=0, sticky="nsew")
+        self.object_listbox.grid(row=13, column=0, sticky="nsew")
         self.object_listbox.bind("<<ListboxSelect>>", lambda _event: self._load_selected_object_from_list())
-        parent.rowconfigure(12, weight=1)
+        parent.rowconfigure(13, weight=1)
 
     def _build_canvas(self, parent: ttk.Frame) -> None:
         ttk.Label(parent, text="Map").grid(row=0, column=0, sticky="w")
@@ -438,6 +446,29 @@ class MapEditor:
             return
         self.map_path = Path(path)
         self.save_map()
+
+    def export_map_preview(self) -> None:
+        try:
+            self._sync_map_metadata()
+        except ValueError as exc:
+            messagebox.showerror("Invalid map", str(exc))
+            return
+
+        MAP_PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+        output_path = MAP_PREVIEW_DIR / f"{self.map_data['map_id']}.png"
+        pg.init()
+
+        world_width = int(self.map_data["world"]["width"])
+        world_height = int(self.map_data["world"]["height"])
+        max_width = 1600
+        max_height = 1200
+        scale = min(max_width / max(1, world_width), max_height / max(1, world_height))
+        scale = max(0.2, min(1.0, scale))
+
+        surface = pg.Surface((max(1, int(world_width * scale)), max(1, int(world_height * scale))), pg.SRCALPHA)
+        self._render_map_preview(surface, scale)
+        pg.image.save(surface, output_path)
+        messagebox.showinfo("Exported", f"Exported {output_path.name} to {output_path.parent}")
 
     def refresh_map_files(self, select_name: str | None = None) -> None:
         self.map_files_listbox.delete(0, tk.END)
@@ -892,6 +923,112 @@ class MapEditor:
 
         if self.selected_ref is not None:
             self._draw_selection_overlay(self.selected_ref)
+
+    def _render_map_preview(self, surface: pg.Surface, scale: float) -> None:
+        background_color = (233, 226, 207)
+        world_fill = (245, 239, 222)
+        dead_hedge_fill = (122, 106, 86)
+        dead_hedge_accent = (150, 131, 108)
+        restored_hedge_fill = (111, 139, 96)
+        restored_hedge_accent = (140, 171, 122)
+        hazard_fill = (164, 88, 88, 40)
+        hazard_outline = (132, 61, 61, 148)
+        restore_fill = (122, 174, 122, 28)
+        restore_outline = (81, 132, 84, 120)
+        barrier_fill = (144, 171, 111)
+        spirit_barrier_fill = (156, 193, 218)
+        text_color = (48, 58, 64)
+
+        surface.fill(background_color)
+        pg.draw.rect(surface, world_fill, surface.get_rect())
+
+        def world_to_screen(x: float, y: float) -> tuple[int, int]:
+            return (int(x * scale), int(y * scale))
+
+        def draw_radius_zone(obj: dict, fill: tuple[int, ...], outline: tuple[int, ...]) -> None:
+            center = world_to_screen(float(obj["x"]), float(obj["y"]))
+            radius = max(8, int(float(obj.get("radius", 12.0)) * scale))
+            overlay = pg.Surface((radius * 2 + 6, radius * 2 + 6), pg.SRCALPHA)
+            pg.draw.circle(overlay, fill, (radius + 3, radius + 3), radius)
+            surface.blit(overlay, (center[0] - radius - 3, center[1] - radius - 3))
+            pg.draw.circle(surface, outline, center, radius, width=2)
+
+        for zone in self.map_data["hazard_zones"]:
+            draw_radius_zone(zone, hazard_fill, hazard_outline)
+        for zone in self.map_data["restoration_zones"]:
+            draw_radius_zone(zone, restore_fill, restore_outline)
+
+        for rect in self.map_data["collision_rects"]:
+            restored = bool(rect.get("restored_by_zone_id"))
+            fill = restored_hedge_fill if restored else dead_hedge_fill
+            accent = restored_hedge_accent if restored else dead_hedge_accent
+            rect_surface = pg.Rect(
+                int(float(rect["x"]) * scale),
+                int(float(rect["y"]) * scale),
+                max(1, int(float(rect["width"]) * scale)),
+                max(1, int(float(rect["height"]) * scale)),
+            )
+            pg.draw.rect(surface, fill, rect_surface, border_radius=max(2, min(12, int(12 * scale))))
+            accent_rect = rect_surface.inflate(max(-2, int(-8 * scale)), max(-2, int(-8 * scale)))
+            if accent_rect.width > 0 and accent_rect.height > 0:
+                pg.draw.rect(surface, accent, accent_rect, border_radius=max(2, min(10, int(10 * scale))))
+
+        for barrier in self.map_data["traversal_barriers"]:
+            rect_surface = pg.Rect(
+                int(float(barrier["x"]) * scale),
+                int(float(barrier["y"]) * scale),
+                max(1, int(float(barrier["width"]) * scale)),
+                max(1, int(float(barrier["height"]) * scale)),
+            )
+            fill = spirit_barrier_fill if barrier.get("spirit_passable", False) else barrier_fill
+            pg.draw.rect(surface, fill, rect_surface, border_radius=max(2, min(10, int(10 * scale))))
+            pg.draw.rect(surface, (79, 111, 136) if barrier.get("spirit_passable", False) else (91, 106, 65), rect_surface, width=2, border_radius=max(2, min(10, int(10 * scale))))
+
+        self._render_preview_decorations(surface, scale, foreground_only=False)
+
+        shrine_asset = load_visual_asset("shrine")
+        render_visual_asset(surface, shrine_asset, world_to_screen(self.map_data["shrine"]["x"], self.map_data["shrine"]["y"]), scale=scale)
+
+        for egg in self.map_data["egg_spawns"]:
+            egg_asset = "egg_restoration" if egg.get("egg_type") == "restoration" else "egg_revival"
+            render_visual_asset(surface, load_visual_asset(egg_asset), world_to_screen(egg["x"], egg["y"]), scale=scale)
+
+        for pickup in self.map_data["spirit_pickups"]:
+            render_visual_asset(surface, load_visual_asset("spirit_seed"), world_to_screen(pickup["x"], pickup["y"]), scale=scale)
+
+        for enemy in self.map_data["enemy_spawns"]:
+            render_visual_asset(surface, load_visual_asset("bramble_nest"), world_to_screen(enemy["x"], enemy["y"]), scale=scale)
+
+        bloom_asset = load_visual_asset("heart_bloom_dormant")
+        render_visual_asset(surface, bloom_asset, world_to_screen(self.map_data["final_bloom"]["x"], self.map_data["final_bloom"]["y"]), scale=scale)
+
+        self._render_preview_decorations(surface, scale, foreground_only=True)
+
+        try:
+            font = pg.font.SysFont(None, max(20, int(28 * scale)))
+            title = font.render(self.map_data["name"], True, text_color)
+            surface.blit(title, (16, 12))
+        except Exception:
+            pass
+
+    def _render_preview_decorations(self, surface: pg.Surface, scale: float, *, foreground_only: bool) -> None:
+        for decoration in self.map_data["decorations"]:
+            if bool(decoration.get("draw_above_entities", False)) != foreground_only:
+                continue
+            asset_id = str(decoration.get("asset_id", "")).strip()
+            if not asset_id:
+                continue
+            try:
+                asset = load_visual_asset(asset_id)
+            except FileNotFoundError:
+                continue
+            center = (int(float(decoration["x"]) * scale), int(float(decoration["y"]) * scale))
+            render_visual_asset(
+                surface,
+                asset,
+                center,
+                scale=max(0.1, float(decoration.get("scale", 1.0)) * scale),
+            )
 
     def _draw_grid(self, canvas_width: int, canvas_height: int) -> None:
         step = GRID_SIZE * self.preview_scale

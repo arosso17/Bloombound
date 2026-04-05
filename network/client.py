@@ -4,6 +4,7 @@ import queue
 import socket
 import threading
 import time
+import math
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -614,6 +615,21 @@ class EasterClientApp:
             bloom_asset = "heart_bloom_restored" if self.snapshot.final_bloom.get("restored") else "heart_bloom_dormant"
             if self._world_point_visible(self.snapshot.final_bloom["x"], self.snapshot.final_bloom["y"], playfield_rect, camera_rect, margin=64):
                 render_visual_asset(screen, self.visual_assets[bloom_asset], (bloom_x, bloom_y))
+                if not self.snapshot.final_bloom.get("restored", False):
+                    progress_seconds = float(self.snapshot.final_bloom.get("channel_progress_seconds", 0.0))
+                    duration_seconds = max(0.01, float(self.snapshot.final_bloom.get("channel_duration_seconds", 3.0)))
+                    progress_ratio = max(0.0, min(1.0, progress_seconds / duration_seconds))
+                    if progress_ratio > 0.0:
+                        ring_rect = pg.Rect(0, 0, 84, 84)
+                        ring_rect.center = (bloom_x, bloom_y)
+                        pg.draw.arc(
+                            screen,
+                            WIN_COLOR,
+                            ring_rect,
+                            -math.pi / 2,
+                            -math.pi / 2 + (math.tau * progress_ratio),
+                            width=5,
+                        )
 
         for egg in self.snapshot.eggs or []:
             if egg.get("collected", False):

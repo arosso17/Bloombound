@@ -1,0 +1,1102 @@
+{
+  "map_id": "briarwake_path",
+  "name": "Briarwake Procession",
+  "world": {
+    "width": 2400,
+    "height": 2400
+  },
+  "player_spawns": [
+    {
+      "x": 246.0,
+      "y": 246.0
+    },
+    {
+      "x": 318.0,
+      "y": 246.0
+    },
+    {
+      "x": 246.0,
+      "y": 318.0
+    },
+    {
+      "x": 318.0,
+      "y": 318.0
+    }
+  ],
+  "collision_rects": [
+    {
+      "rect_id": "north_outer",
+      "x": 120.0,
+      "y": 120.0,
+      "width": 2160.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "west_outer",
+      "x": 120.0,
+      "y": 120.0,
+      "width": 40.0,
+      "height": 2160.0
+    },
+    {
+      "rect_id": "east_outer",
+      "x": 2240.0,
+      "y": 120.0,
+      "width": 40.0,
+      "height": 2160.0
+    },
+    {
+      "rect_id": "south_outer",
+      "x": 120.0,
+      "y": 2240.0,
+      "width": 2160.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_east_top",
+      "x": 620.0,
+      "y": 120.0,
+      "width": 40.0,
+      "height": 260.0
+    },
+    {
+      "rect_id": "hub_east_bottom",
+      "x": 620.0,
+      "y": 500.0,
+      "width": 40.0,
+      "height": 360.0
+    },
+    {
+      "rect_id": "hub_south_left",
+      "x": 160.0,
+      "y": 820.0,
+      "width": 220.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "hub_south_right",
+      "x": 500.0,
+      "y": 820.0,
+      "width": 160.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "shrine_planter",
+      "x": 360.0,
+      "y": 450.0,
+      "width": 110.0,
+      "height": 110.0
+    },
+    {
+      "rect_id": "orchard_north",
+      "x": 780.0,
+      "y": 220.0,
+      "width": 520.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_west_top",
+      "x": 780.0,
+      "y": 220.0,
+      "width": 40.0,
+      "height": 240.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_west_bottom",
+      "x": 780.0,
+      "y": 580.0,
+      "width": 40.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_east",
+      "x": 1260.0,
+      "y": 220.0,
+      "width": 40.0,
+      "height": 580.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_south_left",
+      "x": 780.0,
+      "y": 760.0,
+      "width": 180.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "orchard_south_right",
+      "x": 1080.0,
+      "y": 760.0,
+      "width": 220.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_orchard"
+    },
+    {
+      "rect_id": "grove_north",
+      "x": 220.0,
+      "y": 1020.0,
+      "width": 500.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grove_west",
+      "x": 220.0,
+      "y": 1020.0,
+      "width": 40.0,
+      "height": 680.0
+    },
+    {
+      "rect_id": "grove_south",
+      "x": 220.0,
+      "y": 1660.0,
+      "width": 500.0,
+      "height": 40.0
+    },
+    {
+      "rect_id": "grove_east_top",
+      "x": 680.0,
+      "y": 1020.0,
+      "width": 40.0,
+      "height": 140.0
+    },
+    {
+      "rect_id": "grove_east_bottom",
+      "x": 680.0,
+      "y": 1380.0,
+      "width": 40.0,
+      "height": 320.0
+    },
+    {
+      "rect_id": "grove_pillar_a",
+      "x": 420.0,
+      "y": 1180.0,
+      "width": 120.0,
+      "height": 220.0
+    },
+    {
+      "rect_id": "grove_pillar_b",
+      "x": 500.0,
+      "y": 1460.0,
+      "width": 120.0,
+      "height": 120.0
+    },
+    {
+      "rect_id": "glass_north",
+      "x": 1480.0,
+      "y": 240.0,
+      "width": 560.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_west_top",
+      "x": 1480.0,
+      "y": 240.0,
+      "width": 40.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_west_bottom",
+      "x": 1480.0,
+      "y": 580.0,
+      "width": 40.0,
+      "height": 380.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_east",
+      "x": 2000.0,
+      "y": 240.0,
+      "width": 40.0,
+      "height": 720.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_south_left",
+      "x": 1480.0,
+      "y": 920.0,
+      "width": 220.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_south_right",
+      "x": 1800.0,
+      "y": 920.0,
+      "width": 240.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_bed_a",
+      "x": 1620.0,
+      "y": 400.0,
+      "width": 120.0,
+      "height": 240.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "glass_bed_b",
+      "x": 1800.0,
+      "y": 560.0,
+      "width": 120.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "rect_id": "south_north_left",
+      "x": 920.0,
+      "y": 1260.0,
+      "width": 260.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_north_right",
+      "x": 1320.0,
+      "y": 1260.0,
+      "width": 320.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_west",
+      "x": 920.0,
+      "y": 1260.0,
+      "width": 40.0,
+      "height": 700.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_east",
+      "x": 1600.0,
+      "y": 1260.0,
+      "width": 40.0,
+      "height": 700.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_south_left",
+      "x": 920.0,
+      "y": 1920.0,
+      "width": 300.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_south_right",
+      "x": 1360.0,
+      "y": 1920.0,
+      "width": 280.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_island_top",
+      "x": 1160.0,
+      "y": 1500.0,
+      "width": 220.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_island_left",
+      "x": 1160.0,
+      "y": 1500.0,
+      "width": 40.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_island_right",
+      "x": 1340.0,
+      "y": 1500.0,
+      "width": 40.0,
+      "height": 220.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "south_island_bottom",
+      "x": 1160.0,
+      "y": 1680.0,
+      "width": 220.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "heart_north_left",
+      "x": 1760.0,
+      "y": 1760.0,
+      "width": 150.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "heart_north_right",
+      "x": 2050.0,
+      "y": 1760.0,
+      "width": 150.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "heart_west",
+      "x": 1760.0,
+      "y": 1760.0,
+      "width": 40.0,
+      "height": 420.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "heart_east",
+      "x": 2160.0,
+      "y": 1760.0,
+      "width": 40.0,
+      "height": 420.0,
+      "restored_by_zone_id": "restore_south_garden"
+    },
+    {
+      "rect_id": "heart_south",
+      "x": 1760.0,
+      "y": 2140.0,
+      "width": 440.0,
+      "height": 40.0,
+      "restored_by_zone_id": "restore_south_garden"
+    }
+  ],
+  "traversal_barriers": [
+    {
+      "barrier_id": "spirit_grove_gate",
+      "x": 680.0,
+      "y": 1160.0,
+      "width": 40.0,
+      "height": 220.0,
+      "cleared_by_zone_id": "",
+      "spirit_passable": true
+    },
+    {
+      "barrier_id": "glasshouse_entry_gate",
+      "x": 1480.0,
+      "y": 460.0,
+      "width": 40.0,
+      "height": 120.0,
+      "cleared_by_zone_id": "restore_orchard",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "south_garden_gate",
+      "x": 1180.0,
+      "y": 1260.0,
+      "width": 140.0,
+      "height": 40.0,
+      "cleared_by_zone_id": "restore_glasshouse",
+      "spirit_passable": false
+    },
+    {
+      "barrier_id": "heart_gate",
+      "x": 1910.0,
+      "y": 1760.0,
+      "width": 140.0,
+      "height": 40.0,
+      "cleared_by_zone_id": "restore_south_garden",
+      "spirit_passable": false
+    }
+  ],
+  "decorations": [
+    {
+      "decoration_id": "hub_bush_1",
+      "asset_id": "dead_bush",
+      "x": 234.0,
+      "y": 426.0,
+      "scale": 1.44
+    },
+    {
+      "decoration_id": "hub_tulip_1",
+      "asset_id": "dead_tulip",
+      "x": 520.0,
+      "y": 296.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "grove_bush_1",
+      "asset_id": "dead_bush",
+      "x": 334.0,
+      "y": 1128.0,
+      "scale": 1.48
+    },
+    {
+      "decoration_id": "grove_reeds_1",
+      "asset_id": "dead_reeds",
+      "x": 602.0,
+      "y": 1136.0,
+      "scale": 0.74
+    },
+    {
+      "decoration_id": "grove_reeds_2",
+      "asset_id": "dead_reeds",
+      "x": 336.0,
+      "y": 1540.0,
+      "scale": 0.72
+    },
+    {
+      "decoration_id": "grove_tulip_1",
+      "asset_id": "dead_tulip",
+      "x": 600.0,
+      "y": 1574.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_orchard_1",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 958.0,
+      "y": 566.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "flower_orchard_2",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1112.0,
+      "y": 642.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_orchard_3",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 858.0,
+      "y": 640.0,
+      "scale": 0.58
+    },
+    {
+      "decoration_id": "orchard_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 868.0,
+      "y": 352.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "orchard_tulip_2",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1172.0,
+      "y": 392.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "orchard_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1132.0,
+      "y": 540.0,
+      "scale": 1.48
+    },
+    {
+      "decoration_id": "orchard_bush_2",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 906.0,
+      "y": 710.0,
+      "scale": 1.36
+    },
+    {
+      "decoration_id": "orchard_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "x": 1226.0,
+      "y": 710.0,
+      "scale": 0.74
+    },
+    {
+      "decoration_id": "flower_glass_1",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1688.0,
+      "y": 712.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_glass_2",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1872.0,
+      "y": 772.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "flower_glass_3",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1768.0,
+      "y": 872.0,
+      "scale": 0.6
+    },
+    {
+      "decoration_id": "glass_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1566.0,
+      "y": 334.0,
+      "scale": 1.4
+    },
+    {
+      "decoration_id": "glass_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1898.0,
+      "y": 334.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "glass_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1546.0,
+      "y": 828.0,
+      "scale": 0.76
+    },
+    {
+      "decoration_id": "glass_reeds_2",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1928.0,
+      "y": 876.0,
+      "scale": 0.78
+    },
+    {
+      "decoration_id": "glass_reeds_3",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "x": 1694.0,
+      "y": 918.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "flower_south_1",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1118.0,
+      "y": 1436.0,
+      "scale": 0.76
+    },
+    {
+      "decoration_id": "flower_south_2",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1468.0,
+      "y": 1518.0,
+      "scale": 0.72
+    },
+    {
+      "decoration_id": "flower_south_3",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1100.0,
+      "y": 1784.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "flower_south_4",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1452.0,
+      "y": 1822.0,
+      "scale": 0.7
+    },
+    {
+      "decoration_id": "south_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1032.0,
+      "y": 1368.0,
+      "scale": 1.44
+    },
+    {
+      "decoration_id": "south_bush_2",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1498.0,
+      "y": 1706.0,
+      "scale": 1.4
+    },
+    {
+      "decoration_id": "south_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1106.0,
+      "y": 1880.0,
+      "scale": 0.66
+    },
+    {
+      "decoration_id": "south_tulip_2",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1518.0,
+      "y": 1410.0,
+      "scale": 0.68
+    },
+    {
+      "decoration_id": "south_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1004.0,
+      "y": 1456.0,
+      "scale": 0.84
+    },
+    {
+      "decoration_id": "south_reeds_2",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1170.0,
+      "y": 1430.0,
+      "scale": 0.78
+    },
+    {
+      "decoration_id": "south_reeds_3",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1456.0,
+      "y": 1428.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "south_reeds_4",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1118.0,
+      "y": 1650.0,
+      "scale": 0.86
+    },
+    {
+      "decoration_id": "south_reeds_5",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1386.0,
+      "y": 1648.0,
+      "scale": 0.86
+    },
+    {
+      "decoration_id": "south_reeds_6",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1012.0,
+      "y": 1886.0,
+      "scale": 0.8
+    },
+    {
+      "decoration_id": "south_reeds_7",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1492.0,
+      "y": 1888.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "flower_heart_1",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1914.0,
+      "y": 1968.0,
+      "scale": 0.62
+    },
+    {
+      "decoration_id": "flower_heart_2",
+      "asset_id": "dead_flower",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 2058.0,
+      "y": 1988.0,
+      "scale": 0.62
+    },
+    {
+      "decoration_id": "heart_bush_1",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1998.0,
+      "y": 1898.0,
+      "scale": 1.48
+    },
+    {
+      "decoration_id": "heart_reeds_1",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1840.0,
+      "y": 2060.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "heart_reeds_2",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 2140.0,
+      "y": 2064.0,
+      "scale": 0.82
+    },
+    {
+      "decoration_id": "heart_tulip_1",
+      "asset_id": "dead_tulip",
+      "restored_by_zone_id": "restore_south_garden",
+      "x": 1986.0,
+      "y": 2120.0,
+      "scale": 0.64
+    },
+    {
+      "decoration_id": "decoration_1",
+      "asset_id": "grass_sprout",
+      "restored_by_zone_id": "",
+      "x": 464,
+      "y": 704,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "decoration_2",
+      "asset_id": "grass_sprout",
+      "restored_by_zone_id": "",
+      "x": 240,
+      "y": 640,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "decoration_3",
+      "asset_id": "grass_sprout",
+      "restored_by_zone_id": "",
+      "x": 544,
+      "y": 480,
+      "scale": 1.0
+    },
+    {
+      "decoration_id": "egg_hide_hub_restore",
+      "asset_id": "crate_mossy",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 770.0,
+      "y": 422.0,
+      "scale": 0.92
+    },
+    {
+      "decoration_id": "egg_hide_hub_revive",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 376.0,
+      "y": 688.0,
+      "scale": 1.1
+    },
+    {
+      "decoration_id": "egg_hide_orchard_restore",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_orchard",
+      "draw_above_entities": true,
+      "x": 1146.0,
+      "y": 702.0,
+      "scale": 0.94
+    },
+    {
+      "decoration_id": "egg_hide_glass_restore",
+      "asset_id": "crate_tall",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 1888.0,
+      "y": 410.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "egg_hide_glass_restore_side",
+      "asset_id": "crate_broken",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 1922.0,
+      "y": 436.0,
+      "scale": 0.88
+    },
+    {
+      "decoration_id": "egg_hide_glass_revive",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_glasshouse",
+      "draw_above_entities": true,
+      "x": 1682.0,
+      "y": 846.0,
+      "scale": 0.96
+    },
+    {
+      "decoration_id": "egg_hide_corridor_restore",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 900.0,
+      "y": 1026.0,
+      "scale": 1.12
+    },
+    {
+      "decoration_id": "egg_hide_south_revive",
+      "asset_id": "dead_reeds",
+      "restored_by_zone_id": "restore_south_garden",
+      "draw_above_entities": true,
+      "x": 1030.0,
+      "y": 1814.0,
+      "scale": 0.98
+    },
+    {
+      "decoration_id": "egg_hide_south_restore",
+      "asset_id": "dead_bush",
+      "restored_by_zone_id": "restore_south_garden",
+      "draw_above_entities": true,
+      "x": 1512.0,
+      "y": 1806.0,
+      "scale": 1.16
+    },
+    {
+      "decoration_id": "egg_hide_south_restore_crate",
+      "asset_id": "crate_broken",
+      "restored_by_zone_id": "",
+      "draw_above_entities": true,
+      "x": 1462.0,
+      "y": 1828.0,
+      "scale": 0.84
+    }
+  ],
+  "patrol_points": [
+    {
+      "point_id": "orchard_patrol_a",
+      "enemy_id": "bramble_orchard",
+      "x": 904.0,
+      "y": 356.0
+    },
+    {
+      "point_id": "orchard_patrol_b",
+      "enemy_id": "bramble_orchard",
+      "x": 1148.0,
+      "y": 704.0
+    },
+    {
+      "point_id": "glass_patrol_a",
+      "enemy_id": "bramble_glass",
+      "x": 1608.0,
+      "y": 356.0
+    },
+    {
+      "point_id": "glass_patrol_b",
+      "enemy_id": "bramble_glass",
+      "x": 1910.0,
+      "y": 848.0
+    },
+    {
+      "point_id": "south_patrol_a",
+      "enemy_id": "bramble_marsh",
+      "x": 1032.0,
+      "y": 1368.0
+    },
+    {
+      "point_id": "south_patrol_b",
+      "enemy_id": "bramble_marsh",
+      "x": 1492.0,
+      "y": 1812.0
+    },
+    {
+      "point_id": "heart_patrol_a",
+      "enemy_id": "bramble_heart",
+      "x": 1918.0,
+      "y": 1862.0
+    },
+    {
+      "point_id": "heart_patrol_b",
+      "enemy_id": "bramble_heart",
+      "x": 2106.0,
+      "y": 2062.0
+    }
+  ],
+  "egg_spawns": [
+    {
+      "spawn_id": "orchard_entry_restore",
+      "x": 758.0,
+      "y": 434.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "hub_revive_1",
+      "x": 360.0,
+      "y": 700.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "orchard_restore_spare",
+      "x": 1132.0,
+      "y": 714.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "glass_restore_1",
+      "x": 1884.0,
+      "y": 430.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "glass_revive_1",
+      "x": 1670.0,
+      "y": 858.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "corridor_restore_spare",
+      "x": 900.0,
+      "y": 1038.0,
+      "egg_type": "restoration"
+    },
+    {
+      "spawn_id": "south_revive_1",
+      "x": 1016.0,
+      "y": 1826.0,
+      "egg_type": "revival"
+    },
+    {
+      "spawn_id": "south_restore_1",
+      "x": 1494.0,
+      "y": 1820.0,
+      "egg_type": "restoration"
+    }
+  ],
+  "spirit_pickups": [
+    {
+      "pickup_id": "spirit_seed_1",
+      "x": 354.0,
+      "y": 1194.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "spirit_seed_2",
+      "x": 608.0,
+      "y": 1328.0,
+      "radius": 12
+    },
+    {
+      "pickup_id": "spirit_seed_3",
+      "x": 448.0,
+      "y": 1568.0,
+      "radius": 12
+    }
+  ],
+  "restoration_zones": [
+    {
+      "zone_id": "restore_orchard",
+      "x": 1044.0,
+      "y": 620.0,
+      "radius": 88.0,
+      "interact_radius": 108.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_glasshouse",
+      "x": 1768.0,
+      "y": 756.0,
+      "radius": 92.0,
+      "interact_radius": 112.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    },
+    {
+      "zone_id": "restore_south_garden",
+      "x": 1288.0,
+      "y": 1572.0,
+      "radius": 104.0,
+      "interact_radius": 124.0,
+      "required_egg_type": "restoration",
+      "restore_cost": 1
+    }
+  ],
+  "hazard_zones": [
+    {
+      "zone_id": "hazard_orchard",
+      "x": 1038.0,
+      "y": 484.0,
+      "radius": 126.0,
+      "damage_per_second": 16.0,
+      "slow_multiplier": 0.8,
+      "cleared_by_zone_id": "restore_orchard"
+    },
+    {
+      "zone_id": "hazard_glasshouse",
+      "x": 1768.0,
+      "y": 520.0,
+      "radius": 154.0,
+      "damage_per_second": 20.0,
+      "slow_multiplier": 0.74,
+      "cleared_by_zone_id": "restore_glasshouse"
+    },
+    {
+      "zone_id": "hazard_south_garden",
+      "x": 1288.0,
+      "y": 1572.0,
+      "radius": 170.0,
+      "damage_per_second": 22.0,
+      "slow_multiplier": 0.7,
+      "cleared_by_zone_id": "restore_south_garden"
+    }
+  ],
+  "shrine": {
+    "shrine_id": "shrine_hub",
+    "x": 280.0,
+    "y": 280.0,
+    "interact_radius": 54,
+    "revive_radius": 72
+  },
+  "enemy_spawns": [
+    {
+      "enemy_id": "bramble_orchard",
+      "x": 1080.0,
+      "y": 482.0,
+      "radius": 18.0,
+      "speed": 146.0,
+      "damage_per_second": 40.0,
+      "leash_radius": 260.0,
+      "aggro_radius": 210.0,
+      "alert_duration_ticks": 80
+    },
+    {
+      "enemy_id": "bramble_glass",
+      "x": 1768.0,
+      "y": 520.0,
+      "radius": 18.0,
+      "speed": 152.0,
+      "damage_per_second": 42.0,
+      "leash_radius": 300.0,
+      "aggro_radius": 220.0,
+      "alert_duration_ticks": 84
+    },
+    {
+      "enemy_id": "bramble_marsh",
+      "x": 1284.0,
+      "y": 1476.0,
+      "radius": 18.0,
+      "speed": 150.0,
+      "damage_per_second": 42.0,
+      "leash_radius": 330.0,
+      "aggro_radius": 235.0,
+      "alert_duration_ticks": 88
+    },
+    {
+      "enemy_id": "bramble_heart",
+      "x": 1974.0,
+      "y": 1942.0,
+      "radius": 18.0,
+      "speed": 160.0,
+      "damage_per_second": 44.0,
+      "leash_radius": 250.0,
+      "aggro_radius": 210.0,
+      "alert_duration_ticks": 84
+    }
+  ],
+  "final_bloom": {
+    "bloom_id": "heart_bloom",
+    "x": 1982.0,
+    "y": 1978.0,
+    "radius": 26,
+    "interact_radius": 74
+  }
+}
