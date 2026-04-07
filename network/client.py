@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import random
 import socket
 import threading
 import time
@@ -13,6 +14,7 @@ import pygame as pg
 from gameplay.collision import move_circle
 from gameplay.map_loader import load_map
 from gameplay.map_types import CollisionRect, DecorationDef, MapDefinition, TraversalBarrierDef
+from gameplay.navigation import NavGrid, find_path
 from gameplay.state import ALIVE_SPEED, PLAYER_COLORS, SPIRIT_SPEED
 from gameplay.visual_assets import load_visual_asset, render_visual_asset
 from network.diagnostics import ClientDiagnostics
@@ -58,6 +60,10 @@ ENEMY_PATROL_RING = (86, 118, 78)
 ENEMY_ALERT_RING = (224, 162, 81)
 ENEMY_CHASE_RING = (198, 83, 83)
 ENEMY_RETURN_RING = (120, 105, 84)
+SAFE_ZONE_GLOW_COLOR = (247, 221, 144, 34)
+SAFE_ZONE_EDGE_COLOR = (247, 221, 144, 78)
+PATROL_TRAIL_COLOR = (165, 160, 136, 82)
+PATROL_TRAIL_EDGE_COLOR = (141, 135, 111, 104)
 REMOTE_POSITION_LERP = 0.28
 LOCAL_CORRECTION_LERP = 0.35
 LOCAL_SNAP_DISTANCE = 96.0
@@ -74,8 +80,8 @@ class ClientSnapshot:
     players: list[dict] | None = None
     eggs: list[dict] | None = None
     spirit_pickups: list[dict] | None = None
-    restoration_zones: list[dict] | None = None
-    hazard_zones: list[dict] | None = None
+    restoration_shrines: list[dict] | None = None
+    bramble_patches: list[dict] | None = None
     shrine: dict | None = None
     enemies: list[dict] | None = None
     final_bloom: dict | None = None
@@ -172,8 +178,8 @@ class EasterClientApp:
             players=[],
             eggs=[],
             spirit_pickups=[],
-            restoration_zones=[],
-            hazard_zones=[],
+            restoration_shrines=[],
+            bramble_patches=[],
             shrine=None,
             enemies=[],
         )
@@ -200,12 +206,16 @@ class EasterClientApp:
         self.show_full_hud = False
         self.fullscreen = False
         self.windowed_size = (WINDOW_WIDTH, WINDOW_HEIGHT)
+        self._patrol_trail_cache_key: tuple[str, tuple[str, ...]] | None = None
+        self._patrol_trail_segments: list[tuple[tuple[float, float], tuple[float, float]]] = []
         self.visual_assets = {
             "shrine": load_visual_asset("shrine"),
+            "restoration_shrine": load_visual_asset("restoration_shrine"),
             "egg_revival": load_visual_asset("egg_revival"),
             "egg_restoration": load_visual_asset("egg_restoration"),
             "bramble_enemy": load_visual_asset("bramble_enemy"),
             "bramble_nest": load_visual_asset("bramble_nest"),
+            "bramble_patch": load_visual_asset("bramble_patch"),
             "heart_bloom_dormant": load_visual_asset("heart_bloom_dormant"),
             "heart_bloom_restored": load_visual_asset("heart_bloom_restored"),
             "player": load_visual_asset("player"),
@@ -241,7 +251,7 @@ class EasterClientApp:
     def run(self) -> None:
         pg.init()
         screen = self._apply_display_mode()
-        pg.display.set_caption("Bloombound Prototype Client")
+        pg.display.set_caption("Bloombound")
         clock = pg.time.Clock()
         font = pg.font.SysFont(None, 24)
         small_font = pg.font.SysFont(None, 20)
@@ -335,8 +345,12 @@ class EasterClientApp:
                 self.snapshot.players = list(message.get("players", []))
                 self.snapshot.eggs = list(message.get("eggs", []))
                 self.snapshot.spirit_pickups = list(message.get("spirit_pickups", []))
-                self.snapshot.restoration_zones = list(message.get("restoration_zones", []))
-                self.snapshot.hazard_zones = list(message.get("hazard_zones", []))
+                self.snapshot.restoration_shrines = list(
+                    message.get("restoration_shrines", message.get("restoration_zones", []))
+                )
+                self.snapshot.bramble_patches = list(
+                    message.get("bramble_patches", message.get("hazard_zones", []))
+                )
                 self.snapshot.shrine = message.get("shrine")
                 self.snapshot.enemies = list(message.get("enemies", []))
                 self.snapshot.final_bloom = message.get("final_bloom")
@@ -589,11 +603,12 @@ class EasterClientApp:
         pg.draw.rect(screen, PLAYFIELD_COLOR, playfield_rect, border_radius=18)
         camera_rect = self._camera_rect(playfield_rect)
         screen.set_clip(playfield_rect)
-        self._draw_hazard_zones(screen, playfield_rect, camera_rect)
-        self._draw_restoration_zones(screen, playfield_rect, camera_rect, small_font)
+        self._draw_bramble_patches(screen, playfield_rect, camera_rect)
+        self._draw_restored_safe_zones(screen, playfield_rect, camera_rect)
+        self._draw_patrol_trails(screen, playfield_rect, camera_rect)
         self._draw_map_geometry(screen, playfield_rect, camera_rect)
-        self._draw_map_decorations(screen, playfield_rect, camera_rect, foreground_only=False)
         self._draw_enemy_spawners(screen, playfield_rect, camera_rect)
+        self._draw_restoration_shrines(screen, playfield_rect, camera_rect)
 
         if self.snapshot.shrine:
             shrine_x, shrine_y = self._screen_point(
@@ -658,6 +673,8 @@ class EasterClientApp:
                 camera_rect,
             )
             render_visual_asset(screen, self.visual_assets["spirit_seed"], (pickup_x, pickup_y))
+
+        self._draw_map_decorations(screen, playfield_rect, camera_rect, foreground_only=False)
 
         player_overlays: list[dict] = []
 
@@ -741,7 +758,7 @@ class EasterClientApp:
                     pg.draw.circle(screen, HAZARD_OUTLINE_COLOR, (px, py), ring_radius + 6, width=2)
         screen.set_clip(None)
 
-        title = font.render("Bloombound Networking Prototype", True, TEXT_COLOR)
+        title = font.render("Bloombound", True, TEXT_COLOR)
         if self.connected:
             status_text = self.snapshot.objective_text or "Move: WASD | Interact: E at shrine | Debug spirit: K"
         else:
@@ -881,7 +898,7 @@ class EasterClientApp:
             screen_rect = self._screen_rect(rect.x, rect.y, rect.width, rect.height, playfield_rect, camera_rect)
             if screen_rect is None:
                 continue
-            restored = self._zone_is_restored(rect.restored_by_zone_id)
+            restored = self._shrine_is_restored(rect.restored_by_zone_id)
             fill_color = RESTORED_HEDGE_COLOR if restored else DEAD_HEDGE_COLOR
             accent_color = RESTORED_HEDGE_ACCENT_COLOR if restored else DEAD_HEDGE_ACCENT_COLOR
             pg.draw.rect(screen, fill_color, screen_rect, border_radius=12)
@@ -902,46 +919,101 @@ class EasterClientApp:
             if barrier.spirit_passable and screen_rect.width > 14 and screen_rect.height > 14:
                 pg.draw.rect(screen, (230, 244, 255), screen_rect, width=2, border_radius=10)
 
-    def _draw_hazard_zones(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
-        for zone in self.snapshot.hazard_zones or []:
-            if not zone.get("active", True):
+    def _draw_bramble_patches(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        for patch in self.snapshot.bramble_patches or []:
+            if not patch.get("active", True):
                 continue
-            self._draw_radius_overlay(
+            if not self._world_point_visible(patch["x"], patch["y"], playfield_rect, camera_rect, margin=120):
+                continue
+            radius = max(12.0, float(patch.get("radius", 84.0)))
+            patch_rotation = float(patch.get("rotation_degrees", 0.0))
+            center_x, center_y = self._screen_point(patch["x"], patch["y"], playfield_rect, camera_rect)
+            cluster_count = max(10, min(24, int(radius // 10) + 5))
+            base_scale = max(0.62, radius / 92.0)
+            patch_seed = f"{patch.get('id', '')}:{int(radius)}:{round(patch_rotation, 2)}"
+            rng = random.Random(patch_seed)
+            for _index in range(cluster_count):
+                angle = math.radians(patch_rotation + rng.uniform(0.0, 360.0))
+                orbit = (radius * 0.58) * math.sqrt(rng.random())
+                draw_x = center_x + int(math.cos(angle) * orbit)
+                draw_y = center_y + int(math.sin(angle) * orbit)
+                piece_rotation = patch_rotation + rng.uniform(-170.0, 170.0)
+                edge_ratio = orbit / max(1.0, radius * 0.58)
+                piece_scale = base_scale * (1.12 - 0.22 * edge_ratio) * rng.uniform(0.9, 1.08)
+                render_visual_asset(
+                    screen,
+                    self.visual_assets["bramble_patch"],
+                    (draw_x, draw_y),
+                    scale=piece_scale,
+                    rotation_degrees=piece_rotation,
+                )
+            render_visual_asset(
                 screen,
-                zone["x"],
-                zone["y"],
-                float(zone["radius"]),
-                playfield_rect,
-                camera_rect,
-                fill_color=HAZARD_FILL_COLOR,
-                outline_color=HAZARD_OUTLINE_COLOR,
+                self.visual_assets["bramble_patch"],
+                (center_x, center_y),
+                scale=base_scale * 1.05,
+                rotation_degrees=patch_rotation + 18.0,
             )
 
-    def _draw_restoration_zones(
-        self,
-        screen: pg.Surface,
-        playfield_rect: pg.Rect,
-        camera_rect: pg.Rect,
-        label_font: pg.font.Font,
-    ) -> None:
-        for zone in self.snapshot.restoration_zones or []:
-            restored = bool(zone.get("restored", False))
-            fill_color = RESTORATION_RESTORED_FILL if restored else RESTORATION_FILL_COLOR
-            outline_color = RESTORATION_RESTORED_OUTLINE if restored else RESTORATION_OUTLINE_COLOR
-            self._draw_radius_overlay(
-                screen,
-                zone["x"],
-                zone["y"],
-                float(zone["radius"]),
-                playfield_rect,
-                camera_rect,
-                fill_color=fill_color,
-                outline_color=outline_color,
+    def _draw_restoration_shrines(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        for shrine in self.snapshot.restoration_shrines or []:
+            if not self._world_point_visible(shrine["x"], shrine["y"], playfield_rect, camera_rect, margin=80):
+                continue
+            shrine_x, shrine_y = self._screen_point(shrine["x"], shrine["y"], playfield_rect, camera_rect)
+            restored = bool(shrine.get("restored", False))
+            color_overrides = (
+                {
+                    "shrine_glow": (192, 227, 183, 92),
+                    "shrine_orb": (191, 233, 169),
+                    "shrine_orb_inner": (233, 248, 219),
+                }
+                if restored
+                else {
+                    "shrine_glow": (168, 112, 94, 72),
+                    "shrine_orb": (174, 121, 93),
+                    "shrine_orb_inner": (228, 190, 160),
+                }
             )
-            screen_x, screen_y = self._screen_point(zone["x"], zone["y"], playfield_rect, camera_rect)
-            label = "Restored" if restored else "Restore"
-            label_surf = label_font.render(label, True, outline_color)
-            screen.blit(label_surf, (screen_x - label_surf.get_width() // 2, screen_y - 10))
+            render_visual_asset(
+                screen,
+                self.visual_assets["restoration_shrine"],
+                (shrine_x, shrine_y),
+                color_overrides=color_overrides,
+            )
+
+    def _draw_restored_safe_zones(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        overlay = pg.Surface(playfield_rect.size, pg.SRCALPHA)
+        drew_any = False
+        for shrine in self.snapshot.restoration_shrines or []:
+            if not shrine.get("restored", False):
+                continue
+            radius = float(shrine.get("restore_radius", 0.0))
+            if radius <= 0.0:
+                continue
+            screen_x, screen_y = self._screen_point(shrine["x"], shrine["y"], playfield_rect, camera_rect)
+            local_center = (screen_x - playfield_rect.left, screen_y - playfield_rect.top)
+            screen_radius = max(10, int(radius * CAMERA_ZOOM))
+            pg.draw.circle(overlay, SAFE_ZONE_GLOW_COLOR, local_center, screen_radius)
+            pg.draw.circle(overlay, SAFE_ZONE_EDGE_COLOR, local_center, screen_radius, width=2)
+            drew_any = True
+        if drew_any:
+            screen.blit(overlay, playfield_rect.topleft)
+
+    def _draw_patrol_trails(self, screen: pg.Surface, playfield_rect: pg.Rect, camera_rect: pg.Rect) -> None:
+        segments = self._patrol_trail_world_segments()
+        if not segments:
+            return
+        overlay = pg.Surface(playfield_rect.size, pg.SRCALPHA)
+        for start, end in segments:
+            start_x, start_y = self._screen_point(start[0], start[1], playfield_rect, camera_rect)
+            end_x, end_y = self._screen_point(end[0], end[1], playfield_rect, camera_rect)
+            local_start = (start_x - playfield_rect.left, start_y - playfield_rect.top)
+            local_end = (end_x - playfield_rect.left, end_y - playfield_rect.top)
+            pg.draw.line(overlay, PATROL_TRAIL_COLOR, local_start, local_end, width=12)
+            pg.draw.line(overlay, PATROL_TRAIL_EDGE_COLOR, local_start, local_end, width=4)
+            pg.draw.circle(overlay, PATROL_TRAIL_COLOR, local_start, 6)
+            pg.draw.circle(overlay, PATROL_TRAIL_COLOR, local_end, 6)
+        screen.blit(overlay, playfield_rect.topleft)
 
     def _draw_map_decorations(
         self,
@@ -1001,8 +1073,8 @@ class EasterClientApp:
 
     def _decoration_asset_id(self, decoration: DecorationDef) -> str:
         asset_id = decoration.asset_id
-        restored_zone = self._restored_zone_for_decoration(decoration)
-        if restored_zone is None:
+        restored_shrine = self._restored_shrine_for_decoration(decoration)
+        if restored_shrine is None:
             return asset_id
 
         if asset_id.startswith("dead_"):
@@ -1018,23 +1090,23 @@ class EasterClientApp:
         except FileNotFoundError:
             return asset_id
 
-    def _restored_zone_for_decoration(self, decoration: DecorationDef) -> dict | None:
+    def _restored_shrine_for_decoration(self, decoration: DecorationDef) -> dict | None:
         if not decoration.restored_by_zone_id:
             return None
-        for zone in self.snapshot.restoration_zones or []:
-            if str(zone.get("id", "")) != decoration.restored_by_zone_id:
+        for shrine in self.snapshot.restoration_shrines or []:
+            if str(shrine.get("id", "")) != decoration.restored_by_zone_id:
                 continue
-            if bool(zone.get("restored", False)):
-                return zone
+            if bool(shrine.get("restored", False)):
+                return shrine
         return None
 
-    def _zone_is_restored(self, zone_id: str) -> bool:
-        if not zone_id:
+    def _shrine_is_restored(self, shrine_id: str) -> bool:
+        if not shrine_id:
             return False
-        for zone in self.snapshot.restoration_zones or []:
-            if str(zone.get("id", "")) != zone_id:
+        for shrine in self.snapshot.restoration_shrines or []:
+            if str(shrine.get("id", "")) != shrine_id:
                 continue
-            return bool(zone.get("restored", False))
+            return bool(shrine.get("restored", False))
         return False
 
     def _draw_compact_hud(
@@ -1072,8 +1144,8 @@ class EasterClientApp:
     ) -> None:
         local_player = self._local_player()
         players = self.snapshot.players or []
-        restoration_zones = self.snapshot.restoration_zones or []
-        restored_count = sum(1 for zone in restoration_zones if zone.get("restored", False))
+        restoration_shrines = self.snapshot.restoration_shrines or []
+        restored_count = sum(1 for shrine in restoration_shrines if shrine.get("restored", False))
         local_name = local_player["name"] if local_player is not None else "Caretaker"
         local_state = str(local_player.get("state", "alive")).title() if local_player is not None else "Unknown"
         health = int(local_player.get("health", 0)) if local_player is not None else 0
@@ -1125,7 +1197,7 @@ class EasterClientApp:
         progress_title = small_font.render("Garden Progress", True, TEXT_COLOR)
         screen.blit(progress_title, (progress_left, progress_top))
         progress_lines = [
-            f"Restored zones: {restored_count}/{len(restoration_zones)}",
+            f"Restored shrines: {restored_count}/{len(restoration_shrines)}",
             f"Live enemies: {len(self.snapshot.enemies or [])}",
             f"Loose eggs: {sum(1 for egg in (self.snapshot.eggs or []) if not egg.get('collected', False))}",
             f"Spirit seeds left: {sum(1 for pickup in (self.snapshot.spirit_pickups or []) if not pickup.get('collected', False))}",
@@ -1221,8 +1293,8 @@ class EasterClientApp:
         if self.current_map is None:
             return []
         restored_lookup = {
-            str(zone.get("id", "")): bool(zone.get("restored", False))
-            for zone in self.snapshot.restoration_zones or []
+            str(shrine.get("id", "")): bool(shrine.get("restored", False))
+            for shrine in self.snapshot.restoration_shrines or []
         }
         active: list[TraversalBarrierDef] = []
         for barrier in self.current_map.traversal_barriers:
@@ -1312,6 +1384,49 @@ class EasterClientApp:
         if self.current_map is not None and self.current_map.map_id == map_id:
             return
         self.current_map = load_map(map_id)
+        self._patrol_trail_cache_key = None
+        self._patrol_trail_segments = []
+
+    def _patrol_trail_world_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+        if self.current_map is None:
+            return []
+        active_barriers = self._active_barriers()
+        cache_key = (
+            self.current_map.map_id,
+            tuple(sorted(barrier.barrier_id for barrier in active_barriers)),
+        )
+        if cache_key == self._patrol_trail_cache_key:
+            return self._patrol_trail_segments
+
+        nav_grid = NavGrid.build(
+            world_width=self.current_map.world_width,
+            world_height=self.current_map.world_height,
+            cell_size=40,
+            collision_rects=self.current_map.collision_rects + self._barrier_rects(active_barriers),
+            agent_radius=18.0,
+        )
+        patrol_routes: dict[str, list[tuple[float, float]]] = {}
+        for point in self.current_map.patrol_points:
+            patrol_routes.setdefault(point.enemy_id, []).append((point.x, point.y))
+
+        segments: list[tuple[tuple[float, float], tuple[float, float]]] = []
+        for enemy in self.current_map.enemy_spawns:
+            route = patrol_routes.get(enemy.enemy_id, [])
+            if not route:
+                continue
+            anchors = [(enemy.x, enemy.y)] + route
+            if len(route) > 1:
+                anchors.append(route[0])
+            for start, end in zip(anchors, anchors[1:]):
+                path = find_path(nav_grid, nav_grid.point_to_cell(start[0], start[1]), nav_grid.point_to_cell(end[0], end[1]))
+                if len(path) < 2:
+                    continue
+                centers = [nav_grid.cell_center(cell) for cell in path]
+                segments.extend((centers[index], centers[index + 1]) for index in range(len(centers) - 1))
+
+        self._patrol_trail_cache_key = cache_key
+        self._patrol_trail_segments = segments
+        return segments
 
     def _draw_match_overlay(
         self,

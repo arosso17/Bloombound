@@ -19,6 +19,8 @@ class VisualShape:
     y: float
     color_key: str | None = None
     rotation_degrees: float = 0.0
+    start_angle_degrees: float = 0.0
+    end_angle_degrees: float = 180.0
     width: float = 0.0
     height: float = 0.0
     radius: float = 0.0
@@ -55,6 +57,8 @@ def visual_asset_from_payload(payload: dict) -> VisualAsset:
             y=float(shape.get("y", 0.0)),
             color_key=shape.get("color_key"),
             rotation_degrees=float(shape.get("rotation_degrees", 0.0)),
+            start_angle_degrees=float(shape.get("start_angle_degrees", 0.0)),
+            end_angle_degrees=float(shape.get("end_angle_degrees", 180.0)),
             width=float(shape.get("width", 0.0)),
             height=float(shape.get("height", 0.0)),
             radius=float(shape.get("radius", 0.0)),
@@ -87,6 +91,7 @@ def render_visual_asset_to_surface(
     padding: int = 0,
     background_color: tuple[int, ...] | None = None,
     color_overrides: dict[str, tuple[int, ...]] | None = None,
+    rotation_degrees: float = 0.0,
 ) -> pg.Surface:
     width = max(1, int(asset.width * scale))
     height = max(1, int(asset.height * scale))
@@ -95,7 +100,9 @@ def render_visual_asset_to_surface(
         surface.fill(background_color)
     for shape in asset.shapes:
         _draw_shape(surface, shape, scale, color_overrides=color_overrides, offset_x=padding, offset_y=padding)
-    return surface
+    if abs(rotation_degrees) < 0.01:
+        return surface
+    return pg.transform.rotozoom(surface, -rotation_degrees, 1.0)
 
 
 def render_visual_asset(
@@ -105,12 +112,16 @@ def render_visual_asset(
     *,
     scale: float = 1.0,
     color_overrides: dict[str, tuple[int, ...]] | None = None,
+    rotation_degrees: float = 0.0,
 ) -> None:
-    width = max(1, int(asset.width * scale))
-    height = max(1, int(asset.height * scale))
-    asset_surface = render_visual_asset_to_surface(asset, scale=scale, color_overrides=color_overrides)
-    top_left = (int(center[0] - width / 2), int(center[1] - height / 2))
-    target.blit(asset_surface, top_left)
+    asset_surface = render_visual_asset_to_surface(
+        asset,
+        scale=scale,
+        color_overrides=color_overrides,
+        rotation_degrees=rotation_degrees,
+    )
+    rect = asset_surface.get_rect(center=(int(center[0]), int(center[1])))
+    target.blit(asset_surface, rect.topleft)
 
 
 def _draw_shape(
@@ -133,6 +144,34 @@ def _draw_shape(
             pg.draw.circle(surface, fill_color, center, radius)
         if shape.outline is not None and shape.outline_width > 0:
             pg.draw.circle(surface, shape.outline, center, radius, width=max(1, int(shape.outline_width * scale)))
+        return
+
+    if shape.kind == "arc":
+        if shape.outline is None:
+            return
+        outline_width = max(1, int(shape.outline_width * scale)) if shape.outline_width > 0 else 1
+        points = _sample_arc_points(
+            shape.x,
+            shape.y,
+            shape.width,
+            shape.height,
+            shape.start_angle_degrees + shape.rotation_degrees,
+            shape.end_angle_degrees + shape.rotation_degrees,
+            scale,
+            offset_x,
+            offset_y,
+        )
+        if len(points) >= 2:
+            pg.draw.lines(surface, shape.outline, False, points, width=outline_width)
+        return
+
+    if shape.kind == "triangle":
+        points = _triangle_points(shape.x, shape.y, shape.width, shape.height, shape.rotation_degrees)
+        scaled_points = [(offset_x + point_x * scale, offset_y + point_y * scale) for point_x, point_y in points]
+        if fill_color is not None:
+            pg.draw.polygon(surface, fill_color, scaled_points)
+        if shape.outline is not None and shape.outline_width > 0:
+            pg.draw.polygon(surface, shape.outline, scaled_points, width=max(1, int(shape.outline_width * scale)))
         return
 
     if shape.kind in {"rect", "ellipse"}:
@@ -214,3 +253,54 @@ def _rotate_point(x: float, y: float, center_x: float, center_y: float, rotation
         center_x + rel_x * cos_theta - rel_y * sin_theta,
         center_y + rel_x * sin_theta + rel_y * cos_theta,
     )
+
+
+def _sample_arc_points(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    start_angle_degrees: float,
+    end_angle_degrees: float,
+    scale: float,
+    offset_x: int,
+    offset_y: int,
+) -> list[tuple[float, float]]:
+    center_x = x + width / 2
+    center_y = y + height / 2
+    radius_x = width / 2
+    radius_y = height / 2
+    if radius_x <= 0 or radius_y <= 0:
+        return []
+    start_angle = math.radians(start_angle_degrees)
+    end_angle = math.radians(end_angle_degrees)
+    steps = 24
+    if abs(end_angle - start_angle) < 1e-6:
+        angle_values = [start_angle]
+    else:
+        angle_values = [start_angle + ((end_angle - start_angle) * step / steps) for step in range(steps + 1)]
+    points: list[tuple[float, float]] = []
+    for theta in angle_values:
+        point_x = center_x + math.cos(theta) * radius_x
+        point_y = center_y + math.sin(theta) * radius_y
+        points.append((offset_x + point_x * scale, offset_y + point_y * scale))
+    return points
+
+
+def _triangle_points(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    rotation_degrees: float,
+) -> list[tuple[float, float]]:
+    center_x = x + width / 2
+    center_y = y + height / 2
+    points = [
+        (center_x, y),
+        (x + width, y + height),
+        (x, y + height),
+    ]
+    if abs(rotation_degrees) < 0.01:
+        return points
+    return [_rotate_point(point_x, point_y, center_x, center_y, rotation_degrees) for point_x, point_y in points]

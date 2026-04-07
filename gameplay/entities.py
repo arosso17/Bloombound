@@ -93,6 +93,7 @@ class ShrineState:
     y: float
     interact_radius: int = 52
     revive_radius: int = 70
+    stored_revival_eggs: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -101,6 +102,7 @@ class ShrineState:
             "y": round(self.y, 2),
             "interact_radius": self.interact_radius,
             "revive_radius": self.revive_radius,
+            "stored_revival_eggs": self.stored_revival_eggs,
         }
 
 
@@ -137,23 +139,23 @@ class EnemyState:
 
 
 @dataclass
-class RestorationZoneState:
-    zone_id: str
+class RestorationShrineState:
+    shrine_id: str
     x: float
     y: float
-    radius: float = 72.0
     interact_radius: float = 84.0
+    restore_radius: float = 72.0
     required_egg_type: str = "restoration"
     restore_cost: int = 1
     restored: bool = False
 
     def to_dict(self) -> dict:
         return {
-            "id": self.zone_id,
+            "id": self.shrine_id,
             "x": round(self.x, 2),
             "y": round(self.y, 2),
-            "radius": round(self.radius, 2),
             "interact_radius": round(self.interact_radius, 2),
+            "restore_radius": round(self.restore_radius, 2),
             "required_egg_type": self.required_egg_type,
             "restore_cost": self.restore_cost,
             "restored": self.restored,
@@ -161,25 +163,27 @@ class RestorationZoneState:
 
 
 @dataclass
-class HazardZoneState:
-    zone_id: str
+class BramblePatchState:
+    patch_id: str
     x: float
     y: float
+    rotation_degrees: float = 0.0
     radius: float = 84.0
     damage_per_second: float = 18.0
     slow_multiplier: float = 0.72
-    cleared_by_zone_id: str = ""
+    cleared_by_shrine_id: str = ""
     active: bool = True
 
     def to_dict(self) -> dict:
         return {
-            "id": self.zone_id,
+            "id": self.patch_id,
             "x": round(self.x, 2),
             "y": round(self.y, 2),
+            "rotation_degrees": round(self.rotation_degrees, 2),
             "radius": round(self.radius, 2),
             "damage_per_second": round(self.damage_per_second, 2),
             "slow_multiplier": round(self.slow_multiplier, 2),
-            "cleared_by_zone_id": self.cleared_by_zone_id,
+            "cleared_by_shrine_id": self.cleared_by_shrine_id,
             "active": self.active,
         }
 

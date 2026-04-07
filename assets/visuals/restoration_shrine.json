@@ -1,0 +1,110 @@
+{
+  "asset_id": "restoration_shrine",
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "shapes": [
+    {
+      "kind": "circle",
+      "x": 48,
+      "y": 34,
+      "radius": 22,
+      "fill": [255, 236, 201, 64],
+      "color_key": "shrine_glow"
+    },
+    {
+      "kind": "ellipse",
+      "x": 18,
+      "y": 70,
+      "width": 60,
+      "height": 14,
+      "fill": [113, 97, 81],
+      "outline": [78, 65, 54],
+      "outline_width": 2
+    },
+    {
+      "kind": "rect",
+      "x": 24,
+      "y": 58,
+      "width": 48,
+      "height": 14,
+      "fill": [157, 143, 125],
+      "outline": [97, 84, 68],
+      "outline_width": 2
+    },
+    {
+      "kind": "rect",
+      "x": 28,
+      "y": 46,
+      "width": 10,
+      "height": 18,
+      "fill": [145, 132, 118],
+      "outline": [95, 82, 67],
+      "outline_width": 2
+    },
+    {
+      "kind": "rect",
+      "x": 58,
+      "y": 46,
+      "width": 10,
+      "height": 18,
+      "fill": [145, 132, 118],
+      "outline": [95, 82, 67],
+      "outline_width": 2
+    },
+    {
+      "kind": "ellipse",
+      "x": 32,
+      "y": 44,
+      "width": 32,
+      "height": 14,
+      "fill": [198, 184, 161],
+      "outline": [109, 92, 75],
+      "outline_width": 2
+    },
+    {
+      "kind": "circle",
+      "x": 48,
+      "y": 40,
+      "radius": 10,
+      "fill": [187, 141, 108],
+      "color_key": "shrine_orb"
+    },
+    {
+      "kind": "circle",
+      "x": 48,
+      "y": 38,
+      "radius": 5,
+      "fill": [239, 212, 186],
+      "color_key": "shrine_orb_inner"
+    },
+    {
+      "kind": "line",
+      "x": 22,
+      "y": 58,
+      "x2": 16,
+      "y2": 45,
+      "outline": [123, 106, 89],
+      "outline_width": 3
+    },
+    {
+      "kind": "line",
+      "x": 74,
+      "y": 58,
+      "x2": 80,
+      "y2": 45,
+      "outline": [123, 106, 89],
+      "outline_width": 3
+    },
+    {
+      "kind": "ellipse",
+      "x": 24,
+      "y": 18,
+      "width": 48,
+      "height": 34,
+      "outline": [218, 196, 174],
+      "outline_width": 2
+    }
+  ]
+}

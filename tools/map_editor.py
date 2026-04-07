@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import math
+import random
 import sys
 import tkinter as tk
 from copy import deepcopy
@@ -29,8 +31,8 @@ DEFAULT_MAP = {
     "patrol_points": [],
     "egg_spawns": [],
     "spirit_pickups": [],
-    "restoration_zones": [],
-    "hazard_zones": [],
+    "restoration_shrines": [],
+    "bramble_patches": [],
     "shrine": {"shrine_id": "shrine_1", "x": 240.0, "y": 220.0, "interact_radius": 54, "revive_radius": 72},
     "enemy_spawns": [],
     "final_bloom": {"bloom_id": "heart_bloom", "x": 1200.0, "y": 780.0, "radius": 26, "interact_radius": 74},
@@ -65,8 +67,8 @@ class MapEditor:
             "player_spawns": tk.BooleanVar(value=True),
             "egg_spawns": tk.BooleanVar(value=True),
             "spirit_pickups": tk.BooleanVar(value=True),
-            "restoration_zones": tk.BooleanVar(value=True),
-            "hazard_zones": tk.BooleanVar(value=True),
+            "restoration_shrines": tk.BooleanVar(value=True),
+            "bramble_patches": tk.BooleanVar(value=True),
             "enemy_spawns": tk.BooleanVar(value=True),
             "patrol_points": tk.BooleanVar(value=True),
             "shrine": tk.BooleanVar(value=True),
@@ -77,6 +79,7 @@ class MapEditor:
             "id": tk.StringVar(value=""),
             "x": tk.StringVar(value=""),
             "y": tk.StringVar(value=""),
+            "rotation_degrees": tk.StringVar(value=""),
             "width": tk.StringVar(value=""),
             "height": tk.StringVar(value=""),
             "radius": tk.StringVar(value=""),
@@ -94,7 +97,7 @@ class MapEditor:
             "enemy_id": tk.StringVar(value=""),
             "required_egg_type": tk.StringVar(value=""),
             "restore_cost": tk.StringVar(value=""),
-            "cleared_by_zone_id": tk.StringVar(value=""),
+            "cleared_by_shrine_id": tk.StringVar(value=""),
             "slow_multiplier": tk.StringVar(value=""),
             "egg_type": tk.StringVar(value=""),
             "spirit_passable": tk.StringVar(value=""),
@@ -264,8 +267,8 @@ class MapEditor:
             ("player_spawn", "Add Player Spawn"),
             ("egg_spawn", "Add Egg Spawn"),
             ("spirit_pickup", "Add Spirit Pickup"),
-            ("restoration_zone", "Add Restoration"),
-            ("hazard_zone", "Add Hazard"),
+            ("restoration_shrine", "Add Restore Shrine"),
+            ("bramble_patch", "Add Bramble Patch"),
             ("enemy_spawn", "Add Enemy Spawn"),
             ("shrine", "Set Shrine"),
             ("final_bloom", "Set Final Bloom"),
@@ -294,8 +297,8 @@ class MapEditor:
             ("player_spawns", "Player Spawns"),
             ("egg_spawns", "Eggs"),
             ("spirit_pickups", "Spirit Pickups"),
-            ("restoration_zones", "Restores"),
-            ("hazard_zones", "Hazards"),
+            ("restoration_shrines", "Restores"),
+            ("bramble_patches", "Bramble"),
             ("enemy_spawns", "Enemies"),
             ("patrol_points", "Patrols"),
             ("shrine", "Shrine"),
@@ -351,6 +354,7 @@ class MapEditor:
             ("id", "ID"),
             ("x", "X"),
             ("y", "Y"),
+            ("rotation_degrees", "Rotation"),
             ("width", "Width"),
             ("height", "Height"),
             ("radius", "Radius"),
@@ -369,7 +373,7 @@ class MapEditor:
             ("enemy_id", "Enemy ID"),
             ("required_egg_type", "Needs Egg Type"),
             ("restore_cost", "Restore Cost"),
-            ("cleared_by_zone_id", "Cleared By Zone"),
+            ("cleared_by_shrine_id", "Cleared By Shrine"),
             ("slow_multiplier", "Slow Multiplier"),
             ("egg_type", "Egg Type"),
         ]
@@ -531,7 +535,7 @@ class MapEditor:
                 obj["barrier_id"] = self.property_vars["id"].get().strip() or obj["barrier_id"]
                 obj["width"] = max(1.0, self._parse_float_var("width"))
                 obj["height"] = max(1.0, self._parse_float_var("height"))
-                obj["cleared_by_zone_id"] = self.property_vars["cleared_by_zone_id"].get().strip()
+                obj["cleared_by_zone_id"] = self.property_vars["cleared_by_shrine_id"].get().strip()
                 obj["spirit_passable"] = self._parse_bool_var("spirit_passable")
             elif section == "decorations":
                 obj["decoration_id"] = self.property_vars["id"].get().strip() or obj["decoration_id"]
@@ -550,18 +554,19 @@ class MapEditor:
             elif section == "spirit_pickups":
                 obj["pickup_id"] = self.property_vars["id"].get().strip() or obj["pickup_id"]
                 obj["radius"] = max(1.0, self._parse_float_var("radius"))
-            elif section == "restoration_zones":
-                obj["zone_id"] = self.property_vars["id"].get().strip() or obj["zone_id"]
-                obj["radius"] = max(8.0, self._parse_float_var("radius"))
+            elif section == "restoration_shrines":
+                obj["shrine_id"] = self.property_vars["id"].get().strip() or obj["shrine_id"]
+                obj["restore_radius"] = max(8.0, self._parse_float_var("radius"))
                 obj["interact_radius"] = max(8.0, self._parse_float_var("interact_radius"))
                 obj["required_egg_type"] = self.property_vars["required_egg_type"].get().strip() or obj.get("required_egg_type", "restoration")
                 obj["restore_cost"] = max(1, int(self._parse_float_var("restore_cost")))
-            elif section == "hazard_zones":
-                obj["zone_id"] = self.property_vars["id"].get().strip() or obj["zone_id"]
+            elif section == "bramble_patches":
+                obj["patch_id"] = self.property_vars["id"].get().strip() or obj["patch_id"]
+                obj["rotation_degrees"] = self._parse_float_var("rotation_degrees")
                 obj["radius"] = max(8.0, self._parse_float_var("radius"))
                 obj["damage_per_second"] = max(0.0, self._parse_float_var("damage_per_second"))
                 obj["slow_multiplier"] = max(0.1, min(1.0, self._parse_float_var("slow_multiplier")))
-                obj["cleared_by_zone_id"] = self.property_vars["cleared_by_zone_id"].get().strip()
+                obj["cleared_by_shrine_id"] = self.property_vars["cleared_by_shrine_id"].get().strip()
             elif section == "enemy_spawns":
                 obj["enemy_id"] = self.property_vars["id"].get().strip() or obj["enemy_id"]
                 obj["radius"] = max(1.0, self._parse_float_var("radius"))
@@ -749,10 +754,10 @@ class MapEditor:
             labels.append((("egg_spawns", index), f"Egg: {spawn['spawn_id']}"))
         for index, pickup in enumerate(self.map_data["spirit_pickups"]):
             labels.append((("spirit_pickups", index), f"Spirit Pickup: {pickup['pickup_id']}"))
-        for index, zone in enumerate(self.map_data["restoration_zones"]):
-            labels.append((("restoration_zones", index), f"Restore: {zone['zone_id']}"))
-        for index, zone in enumerate(self.map_data["hazard_zones"]):
-            labels.append((("hazard_zones", index), f"Hazard: {zone['zone_id']}"))
+        for index, shrine in enumerate(self.map_data["restoration_shrines"]):
+            labels.append((("restoration_shrines", index), f"Restore Shrine: {shrine['shrine_id']}"))
+        for index, patch in enumerate(self.map_data["bramble_patches"]):
+            labels.append((("bramble_patches", index), f"Bramble: {patch['patch_id']}"))
         labels.append((("shrine", None), f"Shrine: {self.map_data['shrine']['shrine_id']}"))
         for index, enemy in enumerate(self.map_data["enemy_spawns"]):
             labels.append((("enemy_spawns", index), f"Enemy: {enemy['enemy_id']}"))
@@ -790,6 +795,7 @@ class MapEditor:
         section, _, obj = target
         self._set_property("x", obj.get("x", ""))
         self._set_property("y", obj.get("y", ""))
+        self._set_property("rotation_degrees", obj.get("rotation_degrees", ""))
         self._set_property("width", obj.get("width", ""))
         self._set_property("height", obj.get("height", ""))
         self._set_property("radius", obj.get("radius", ""))
@@ -808,7 +814,7 @@ class MapEditor:
         self._set_property("enemy_id", obj.get("enemy_id", ""))
         self._set_property("required_egg_type", obj.get("required_egg_type", ""))
         self._set_property("restore_cost", obj.get("restore_cost", ""))
-        self._set_property("cleared_by_zone_id", obj.get("cleared_by_zone_id", ""))
+        self._set_property("cleared_by_shrine_id", obj.get("cleared_by_shrine_id", obj.get("cleared_by_zone_id", "")))
         self._set_property("slow_multiplier", obj.get("slow_multiplier", ""))
         self._set_property("egg_type", obj.get("egg_type", ""))
 
@@ -827,8 +833,11 @@ class MapEditor:
             self._set_property("id", obj.get("spawn_id", ""))
         elif section == "spirit_pickups":
             self._set_property("id", obj.get("pickup_id", ""))
-        elif section in {"restoration_zones", "hazard_zones"}:
-            self._set_property("id", obj.get("zone_id", ""))
+        elif section == "restoration_shrines":
+            self._set_property("id", obj.get("shrine_id", ""))
+            self._set_property("radius", obj.get("restore_radius", ""))
+        elif section == "bramble_patches":
+            self._set_property("id", obj.get("patch_id", ""))
         elif section == "enemy_spawns":
             self._set_property("id", obj.get("enemy_id", ""))
         elif section == "shrine":
@@ -894,12 +903,12 @@ class MapEditor:
         if self._layer_visible("decorations"):
             for index, decoration in enumerate(self.map_data["decorations"]):
                 self._draw_decoration_marker(index, decoration)
-        if self._layer_visible("hazard_zones"):
-            for index, zone in enumerate(self.map_data["hazard_zones"]):
-                self._draw_radius_marker(zone, "#b56161", "HZ")
-        if self._layer_visible("restoration_zones"):
-            for index, zone in enumerate(self.map_data["restoration_zones"]):
-                self._draw_radius_marker(zone, "#73ab73", "RZ")
+        if self._layer_visible("bramble_patches"):
+            for index, patch in enumerate(self.map_data["bramble_patches"]):
+                self._draw_radius_marker(patch, "#8b5c48", "BP")
+        if self._layer_visible("restoration_shrines"):
+            for index, shrine in enumerate(self.map_data["restoration_shrines"]):
+                self._draw_radius_marker(shrine, "#d6b173", "RS")
         if self._layer_visible("player_spawns"):
             for index, spawn in enumerate(self.map_data["player_spawns"]):
                 self._draw_point_marker(spawn["x"], spawn["y"], "#4f89ff", "P")
@@ -917,7 +926,7 @@ class MapEditor:
             self._draw_radius_marker(self.map_data["shrine"], "#ffd56c", "S")
         if self._layer_visible("enemy_spawns"):
             for index, enemy in enumerate(self.map_data["enemy_spawns"]):
-                self._draw_radius_marker(enemy, "#6b8a63", "B")
+                self._draw_enemy_marker(enemy)
         if self._layer_visible("final_bloom"):
             self._draw_radius_marker(self.map_data["final_bloom"], "#ffb6c7", "H")
 
@@ -931,10 +940,6 @@ class MapEditor:
         dead_hedge_accent = (150, 131, 108)
         restored_hedge_fill = (111, 139, 96)
         restored_hedge_accent = (140, 171, 122)
-        hazard_fill = (164, 88, 88, 40)
-        hazard_outline = (132, 61, 61, 148)
-        restore_fill = (122, 174, 122, 28)
-        restore_outline = (81, 132, 84, 120)
         barrier_fill = (144, 171, 111)
         spirit_barrier_fill = (156, 193, 218)
         text_color = (48, 58, 64)
@@ -944,19 +949,6 @@ class MapEditor:
 
         def world_to_screen(x: float, y: float) -> tuple[int, int]:
             return (int(x * scale), int(y * scale))
-
-        def draw_radius_zone(obj: dict, fill: tuple[int, ...], outline: tuple[int, ...]) -> None:
-            center = world_to_screen(float(obj["x"]), float(obj["y"]))
-            radius = max(8, int(float(obj.get("radius", 12.0)) * scale))
-            overlay = pg.Surface((radius * 2 + 6, radius * 2 + 6), pg.SRCALPHA)
-            pg.draw.circle(overlay, fill, (radius + 3, radius + 3), radius)
-            surface.blit(overlay, (center[0] - radius - 3, center[1] - radius - 3))
-            pg.draw.circle(surface, outline, center, radius, width=2)
-
-        for zone in self.map_data["hazard_zones"]:
-            draw_radius_zone(zone, hazard_fill, hazard_outline)
-        for zone in self.map_data["restoration_zones"]:
-            draw_radius_zone(zone, restore_fill, restore_outline)
 
         for rect in self.map_data["collision_rects"]:
             restored = bool(rect.get("restored_by_zone_id"))
@@ -984,10 +976,47 @@ class MapEditor:
             pg.draw.rect(surface, fill, rect_surface, border_radius=max(2, min(10, int(10 * scale))))
             pg.draw.rect(surface, (79, 111, 136) if barrier.get("spirit_passable", False) else (91, 106, 65), rect_surface, width=2, border_radius=max(2, min(10, int(10 * scale))))
 
-        self._render_preview_decorations(surface, scale, foreground_only=False)
-
         shrine_asset = load_visual_asset("shrine")
         render_visual_asset(surface, shrine_asset, world_to_screen(self.map_data["shrine"]["x"], self.map_data["shrine"]["y"]), scale=scale)
+
+        for patch in self.map_data["bramble_patches"]:
+            radius = max(12.0, float(patch.get("radius", 84.0)))
+            patch_rotation = float(patch.get("rotation_degrees", 0.0))
+            center_x, center_y = world_to_screen(float(patch["x"]), float(patch["y"]))
+            cluster_count = max(10, min(24, int(radius // 10) + 5))
+            base_scale = max(0.62, radius / 92.0) * scale
+            patch_seed = f"{patch.get('patch_id', '')}:{int(radius)}:{round(patch_rotation, 2)}"
+            rng = random.Random(patch_seed)
+            for _index in range(cluster_count):
+                angle = math.radians(patch_rotation + rng.uniform(0.0, 360.0))
+                orbit = (radius * 0.58) * math.sqrt(rng.random()) * scale
+                draw_x = center_x + int(math.cos(angle) * orbit)
+                draw_y = center_y + int(math.sin(angle) * orbit)
+                piece_rotation = patch_rotation + rng.uniform(-170.0, 170.0)
+                edge_ratio = orbit / max(1.0, radius * 0.58 * scale)
+                piece_scale = base_scale * (1.12 - 0.22 * edge_ratio) * rng.uniform(0.9, 1.08)
+                render_visual_asset(
+                    surface,
+                    load_visual_asset("bramble_patch"),
+                    (draw_x, draw_y),
+                    scale=piece_scale,
+                    rotation_degrees=piece_rotation,
+                )
+            render_visual_asset(
+                surface,
+                load_visual_asset("bramble_patch"),
+                (center_x, center_y),
+                scale=base_scale * 1.05,
+                rotation_degrees=patch_rotation + 18.0,
+            )
+
+        for shrine in self.map_data["restoration_shrines"]:
+            render_visual_asset(
+                surface,
+                load_visual_asset("restoration_shrine"),
+                world_to_screen(float(shrine["x"]), float(shrine["y"])),
+                scale=scale,
+            )
 
         for egg in self.map_data["egg_spawns"]:
             egg_asset = "egg_restoration" if egg.get("egg_type") == "restoration" else "egg_revival"
@@ -1002,6 +1031,7 @@ class MapEditor:
         bloom_asset = load_visual_asset("heart_bloom_dormant")
         render_visual_asset(surface, bloom_asset, world_to_screen(self.map_data["final_bloom"]["x"], self.map_data["final_bloom"]["y"]), scale=scale)
 
+        self._render_preview_decorations(surface, scale, foreground_only=False)
         self._render_preview_decorations(surface, scale, foreground_only=True)
 
         try:
@@ -1081,7 +1111,7 @@ class MapEditor:
 
     def _draw_radius_marker(self, obj: dict, fill: str, label: str) -> None:
         x, y = self._world_to_screen(obj["x"], obj["y"])
-        radius = max(8, int(float(obj.get("radius", 12)) * self.preview_scale))
+        radius = max(8, int(self._object_radius(obj) * self.preview_scale))
         interact_radius = float(obj.get("interact_radius", obj.get("revive_radius", 0))) * self.preview_scale
         if interact_radius > 0:
             self.canvas.create_oval(x - interact_radius, y - interact_radius, x + interact_radius, y + interact_radius, outline=fill, dash=(4, 4))
@@ -1106,7 +1136,33 @@ class MapEditor:
                 dash=(4, 2),
             )
         self.canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill, outline="#203040", width=2)
+        rotation_degrees = float(obj.get("rotation_degrees", 0.0))
+        if abs(rotation_degrees) >= 0.01:
+            direction_radians = math.radians(rotation_degrees - 90.0)
+            pointer_length = max(12.0, radius * 0.85)
+            end_x = x + math.cos(direction_radians) * pointer_length
+            end_y = y + math.sin(direction_radians) * pointer_length
+            self.canvas.create_line(x, y, end_x, end_y, fill="#203040", width=2, arrow=tk.LAST)
         self.canvas.create_text(x, y - radius - 10, text=label, fill="#203040")
+
+    def _draw_enemy_marker(self, enemy: dict) -> None:
+        self._draw_radius_marker(enemy, "#6b8a63", "B")
+        leash_radius = float(enemy.get("leash_radius", 0.0)) * self.preview_scale
+        if leash_radius <= 0:
+            return
+        enemy_id = str(enemy.get("enemy_id", ""))
+        for point in self.map_data["patrol_points"]:
+            if str(point.get("enemy_id", "")) != enemy_id:
+                continue
+            x, y = self._world_to_screen(point["x"], point["y"])
+            self.canvas.create_oval(
+                x - leash_radius,
+                y - leash_radius,
+                x + leash_radius,
+                y + leash_radius,
+                outline="#8f5f2d",
+                dash=(2, 6),
+            )
 
     def _draw_selection_overlay(self, ref: tuple[str, int | None]) -> None:
         target = self._selected_object()
@@ -1123,9 +1179,9 @@ class MapEditor:
                 self._draw_handle(handle_name, hx, hy)
             return
 
-        bbox = self._point_bbox(obj["x"], obj["y"], max(float(obj.get("radius", 10)), 12))
+        bbox = self._point_bbox(obj["x"], obj["y"], max(self._object_radius(obj), 12))
         self.canvas.create_rectangle(*bbox, outline="#246bff", width=2, dash=(6, 4))
-        if section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "spirit_pickups", "restoration_zones", "hazard_zones"}:
+        if section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "spirit_pickups", "restoration_shrines", "bramble_patches"}:
             for handle_name, hx, hy in self._radius_handles(obj):
                 self._draw_handle(handle_name, hx, hy)
 
@@ -1140,7 +1196,7 @@ class MapEditor:
                 if obj["x"] <= world_x <= obj["x"] + obj["width"] and obj["y"] <= world_y <= obj["y"] + obj["height"]:
                     return ref
             else:
-                radius = max(float(obj.get("radius", 12)), 12.0)
+                radius = max(self._object_radius(obj), 12.0)
                 delta_x = world_x - obj["x"]
                 delta_y = world_y - obj["y"]
                 if (delta_x * delta_x) + (delta_y * delta_y) <= radius * radius:
@@ -1155,10 +1211,10 @@ class MapEditor:
             objects.extend((("traversal_barriers", index), barrier) for index, barrier in enumerate(self.map_data["traversal_barriers"]))
         if self._layer_visible("decorations"):
             objects.extend((("decorations", index), decoration) for index, decoration in enumerate(self.map_data["decorations"]))
-        if self._layer_visible("hazard_zones"):
-            objects.extend((("hazard_zones", index), zone) for index, zone in enumerate(self.map_data["hazard_zones"]))
-        if self._layer_visible("restoration_zones"):
-            objects.extend((("restoration_zones", index), zone) for index, zone in enumerate(self.map_data["restoration_zones"]))
+        if self._layer_visible("bramble_patches"):
+            objects.extend((("bramble_patches", index), patch) for index, patch in enumerate(self.map_data["bramble_patches"]))
+        if self._layer_visible("restoration_shrines"):
+            objects.extend((("restoration_shrines", index), shrine) for index, shrine in enumerate(self.map_data["restoration_shrines"]))
         if self._layer_visible("player_spawns"):
             objects.extend((("player_spawns", index), spawn) for index, spawn in enumerate(self.map_data["player_spawns"]))
         if self._layer_visible("patrol_points"):
@@ -1182,7 +1238,7 @@ class MapEditor:
         section, _, obj = target
         if section in {"collision_rects", "traversal_barriers"}:
             handles = self._rect_handles(obj)
-        elif section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "spirit_pickups", "restoration_zones", "hazard_zones"}:
+        elif section in {"shrine", "enemy_spawns", "final_bloom", "egg_spawns", "spirit_pickups", "restoration_shrines", "bramble_patches"}:
             handles = self._radius_handles(obj)
         else:
             return None
@@ -1197,7 +1253,7 @@ class MapEditor:
         return [("nw", x1, y1), ("ne", x2, y1), ("sw", x1, y2), ("se", x2, y2)]
 
     def _radius_handles(self, obj: dict) -> list[tuple[str, float, float]]:
-        radius = float(obj.get("radius", obj.get("interact_radius", 12)))
+        radius = self._object_radius(obj)
         screen_center = self._world_to_screen(obj["x"], obj["y"])
         screen_radius = radius * self.preview_scale
         return [
@@ -1206,6 +1262,10 @@ class MapEditor:
             ("s", screen_center[0], screen_center[1] + screen_radius),
             ("w", screen_center[0] - screen_radius, screen_center[1]),
         ]
+
+    @staticmethod
+    def _object_radius(obj: dict) -> float:
+        return float(obj.get("restore_radius", obj.get("radius", obj.get("interact_radius", 12))))
 
     def _resize_object(self, section: str, obj: dict, start_obj: dict, handle_name: str | None, world_x: float, world_y: float) -> None:
         if handle_name is None:
@@ -1238,10 +1298,10 @@ class MapEditor:
             obj["radius"] = round(max(4.0, radius), 2)
         elif section == "enemy_spawns":
             obj["radius"] = round(max(4.0, radius), 2)
-        elif section == "hazard_zones":
+        elif section == "bramble_patches":
             obj["radius"] = round(max(8.0, radius), 2)
-        elif section == "restoration_zones":
-            obj["radius"] = round(max(8.0, radius), 2)
+        elif section == "restoration_shrines":
+            obj["restore_radius"] = round(max(8.0, radius), 2)
             obj["interact_radius"] = round(max(radius + 10.0, float(start_obj.get("interact_radius", radius))), 2)
         elif section == "final_bloom":
             obj["radius"] = round(max(4.0, radius), 2)
@@ -1274,7 +1334,7 @@ class MapEditor:
             return
         if tool == "traversal_barrier":
             self._ensure_layer_visible("traversal_barriers")
-            cleared_by_zone_id = self.map_data["restoration_zones"][0]["zone_id"] if self.map_data["restoration_zones"] else ""
+            cleared_by_zone_id = self.map_data["restoration_shrines"][0]["shrine_id"] if self.map_data["restoration_shrines"] else ""
             self.map_data["traversal_barriers"].append(
                 {
                     "barrier_id": self._next_id("traversal_barriers", "barrier_id", "barrier"),
@@ -1346,36 +1406,37 @@ class MapEditor:
             )
             self._select_object_ref(("spirit_pickups", len(self.map_data["spirit_pickups"]) - 1))
             return
-        if tool == "restoration_zone":
-            self._ensure_layer_visible("restoration_zones")
-            self.map_data["restoration_zones"].append(
+        if tool == "restoration_shrine":
+            self._ensure_layer_visible("restoration_shrines")
+            self.map_data["restoration_shrines"].append(
                 {
-                    "zone_id": self._next_id("restoration_zones", "zone_id", "restore"),
+                    "shrine_id": self._next_id("restoration_shrines", "shrine_id", "restore"),
                     "x": world_x,
                     "y": world_y,
-                    "radius": 72.0,
+                    "restore_radius": 72.0,
                     "interact_radius": 84.0,
                     "required_egg_type": "restoration",
                     "restore_cost": 1,
                 }
             )
-            self._select_object_ref(("restoration_zones", len(self.map_data["restoration_zones"]) - 1))
+            self._select_object_ref(("restoration_shrines", len(self.map_data["restoration_shrines"]) - 1))
             return
-        if tool == "hazard_zone":
-            self._ensure_layer_visible("hazard_zones")
-            cleared_by_zone_id = self.map_data["restoration_zones"][0]["zone_id"] if self.map_data["restoration_zones"] else ""
-            self.map_data["hazard_zones"].append(
+        if tool == "bramble_patch":
+            self._ensure_layer_visible("bramble_patches")
+            cleared_by_shrine_id = self.map_data["restoration_shrines"][0]["shrine_id"] if self.map_data["restoration_shrines"] else ""
+            self.map_data["bramble_patches"].append(
                 {
-                    "zone_id": self._next_id("hazard_zones", "zone_id", "hazard"),
+                    "patch_id": self._next_id("bramble_patches", "patch_id", "patch"),
                     "x": world_x,
                     "y": world_y,
+                    "rotation_degrees": 0.0,
                     "radius": 84.0,
                     "damage_per_second": 18.0,
                     "slow_multiplier": 0.72,
-                    "cleared_by_zone_id": cleared_by_zone_id,
+                    "cleared_by_shrine_id": cleared_by_shrine_id,
                 }
             )
-            self._select_object_ref(("hazard_zones", len(self.map_data["hazard_zones"]) - 1))
+            self._select_object_ref(("bramble_patches", len(self.map_data["bramble_patches"]) - 1))
             return
         if tool == "enemy_spawn":
             self._ensure_layer_visible("enemy_spawns")
@@ -1481,12 +1542,41 @@ class MapEditor:
     def _load_map_path(self, path: Path) -> None:
         self.map_path = path
         self.map_data = json.loads(path.read_text(encoding="utf-8"))
+        if "restoration_shrines" not in self.map_data:
+            self.map_data["restoration_shrines"] = [
+                {
+                    "shrine_id": zone["zone_id"],
+                    "x": zone["x"],
+                    "y": zone["y"],
+                    "interact_radius": zone.get("interact_radius", 84.0),
+                    "restore_radius": zone.get("radius", 72.0),
+                    "required_egg_type": zone.get("required_egg_type", "restoration"),
+                    "restore_cost": zone.get("restore_cost", 1),
+                }
+                for zone in self.map_data.get("restoration_zones", [])
+            ]
+        if "bramble_patches" not in self.map_data:
+            self.map_data["bramble_patches"] = [
+                {
+                    "patch_id": zone["zone_id"],
+                    "x": zone["x"],
+                    "y": zone["y"],
+                    "rotation_degrees": 0.0,
+                    "radius": zone.get("radius", 84.0),
+                    "damage_per_second": zone.get("damage_per_second", 18.0),
+                    "slow_multiplier": zone.get("slow_multiplier", 0.72),
+                    "cleared_by_shrine_id": zone.get("cleared_by_zone_id", ""),
+                }
+                for zone in self.map_data.get("hazard_zones", [])
+            ]
         self.map_data.setdefault("traversal_barriers", [])
         self.map_data.setdefault("decorations", [])
         self.map_data.setdefault("patrol_points", [])
         self.map_data.setdefault("spirit_pickups", [])
-        self.map_data.setdefault("restoration_zones", [])
-        self.map_data.setdefault("hazard_zones", [])
+        self.map_data.setdefault("restoration_shrines", [])
+        self.map_data.setdefault("bramble_patches", [])
+        for patch in self.map_data["bramble_patches"]:
+            patch.setdefault("rotation_degrees", 0.0)
         self.selected_ref = None
         self.drag_mode = None
         self.drag_handle = None

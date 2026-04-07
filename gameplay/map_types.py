@@ -89,25 +89,26 @@ class EnemySpawnDef:
 
 
 @dataclass(frozen=True)
-class RestorationZoneDef:
-    zone_id: str
+class RestorationShrineDef:
+    shrine_id: str
     x: float
     y: float
-    radius: float = 72.0
     interact_radius: float = 84.0
+    restore_radius: float = 72.0
     required_egg_type: str = "restoration"
     restore_cost: int = 1
 
 
 @dataclass(frozen=True)
-class HazardZoneDef:
-    zone_id: str
+class BramblePatchDef:
+    patch_id: str
     x: float
     y: float
+    rotation_degrees: float = 0.0
     radius: float = 84.0
     damage_per_second: float = 18.0
     slow_multiplier: float = 0.72
-    cleared_by_zone_id: str = ""
+    cleared_by_shrine_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -132,8 +133,8 @@ class MapDefinition:
     patrol_points: list[PatrolPointDef]
     egg_spawns: list[EggSpawnDef]
     spirit_pickups: list[SpiritPickupDef]
-    restoration_zones: list[RestorationZoneDef]
-    hazard_zones: list[HazardZoneDef]
+    restoration_shrines: list[RestorationShrineDef]
+    bramble_patches: list[BramblePatchDef]
     shrine: ShrineDef
     enemy_spawns: list[EnemySpawnDef]
     final_bloom: FinalBloomDef

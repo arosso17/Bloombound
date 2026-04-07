@@ -1,0 +1,409 @@
+{
+  "asset_id": "bramble_patch",
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "shapes": [
+    {
+      "kind": "arc",
+      "x": 4.68,
+      "y": 29.42,
+      "rotation_degrees": 162.03,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 220.0,
+      "width": 84.24,
+      "height": 69.25,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "arc",
+      "x": 5.43,
+      "y": 31.64,
+      "rotation_degrees": 172.35,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 80.0,
+      "width": 37.65,
+      "height": 66.59,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 2
+    },
+    {
+      "kind": "arc",
+      "x": 16.05,
+      "y": 27.47,
+      "rotation_degrees": -33.33,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 29.36,
+      "height": 14.53,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "arc",
+      "x": 31.33,
+      "y": 28.16,
+      "rotation_degrees": 70.72,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 130.0,
+      "width": 29.36,
+      "height": 14.53,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "arc",
+      "x": 39.62,
+      "y": 42.07,
+      "rotation_degrees": 252.23,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 130.0,
+      "width": 29.36,
+      "height": 14.53,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "arc",
+      "x": -2.4,
+      "y": 26.41,
+      "rotation_degrees": -22.83,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 130.0,
+      "width": 24.29,
+      "height": 35.2,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "arc",
+      "x": 58.63,
+      "y": 14.39,
+      "rotation_degrees": 42.16,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 140.0,
+      "width": 24.29,
+      "height": 35.2,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "arc",
+      "x": 67.74,
+      "y": 45.5,
+      "rotation_degrees": 67.19,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 130.0,
+      "width": 29.36,
+      "height": 14.53,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": null,
+      "outline": [
+        102,
+        45,
+        11
+      ],
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 25.63,
+      "y": 26.32,
+      "rotation_degrees": -21.22,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 7.35,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 79.58,
+      "y": 47.98,
+      "rotation_degrees": 234.87,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 7.35,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 75.03,
+      "y": 32.41,
+      "rotation_degrees": 28.6,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 7.35,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 14.24,
+      "y": 41.95,
+      "rotation_degrees": 124.64,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 4.75,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 89.18,
+      "y": 64.0,
+      "rotation_degrees": 102.82,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 4.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 49.5,
+      "y": 29.82,
+      "rotation_degrees": 181.6,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 4.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 62.1,
+      "y": 28.34,
+      "rotation_degrees": 23.52,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 4.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 2.39,
+      "y": 54.95,
+      "rotation_degrees": -89.63,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 4.0,
+      "height": 4.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 19.54,
+      "y": 53.54,
+      "rotation_degrees": 120.41,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 3.0,
+      "height": 3.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 50.68,
+      "y": 41.86,
+      "rotation_degrees": 179.83,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 3.0,
+      "height": 3.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 72.65,
+      "y": 58.83,
+      "rotation_degrees": 202.58,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 3.0,
+      "height": 3.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    },
+    {
+      "kind": "triangle",
+      "x": 44.5,
+      "y": 35.08,
+      "rotation_degrees": 119.53,
+      "start_angle_degrees": 0.0,
+      "end_angle_degrees": 180.0,
+      "width": 3.0,
+      "height": 3.0,
+      "radius": 12.0,
+      "x2": 36.0,
+      "y2": 36.0,
+      "fill": [
+        102,
+        45,
+        11
+      ],
+      "outline": null,
+      "outline_width": 1
+    }
+  ]
+}

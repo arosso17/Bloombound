@@ -4,13 +4,13 @@ import math
 
 from gameplay.collision import circle_overlaps_rect, move_circle
 from gameplay.entities import (
+    BramblePatchState,
     EggState,
     EnemyState,
     FinalBloomState,
-    HazardZoneState,
     PlayerInput,
     PlayerState,
-    RestorationZoneState,
+    RestorationShrineState,
     ShrineState,
     SpiritPickupState,
 )
@@ -63,8 +63,8 @@ class GameState:
         self.enemy_patrol_routes = self._build_enemy_patrol_routes()
         self.eggs = self._build_eggs_from_map()
         self.spirit_pickups = self._build_spirit_pickups_from_map()
-        self.restoration_zones = self._build_restoration_zones_from_map()
-        self.hazard_zones = self._build_hazard_zones_from_map()
+        self.restoration_shrines = self._build_restoration_shrines_from_map()
+        self.bramble_patches = self._build_bramble_patches_from_map()
         shrine_def = self.map.shrine
         self.shrine = ShrineState(
             shrine_def.shrine_id,
@@ -119,10 +119,11 @@ class GameState:
         self.final_bloom.restored = False
         self.final_bloom.channel_player_id = ""
         self.final_bloom.channel_progress_seconds = 0.0
+        self.shrine.stored_revival_eggs = 0
         self._reset_eggs()
         self._reset_spirit_pickups()
-        self._reset_restoration_zones()
-        self._reset_hazard_zones()
+        self._reset_restoration_shrines()
+        self._reset_bramble_patches()
         self._reset_enemies()
         for index, player in enumerate(self.players.values()):
             spawn = self.map.player_spawns[index % len(self.map.player_spawns)]
@@ -184,7 +185,7 @@ class GameState:
 
     def update(self, dt: float) -> None:
         self.tick += 1
-        self._sync_hazard_state()
+        self._sync_bramble_state()
         for player in self.players.values():
             self._update_player(player, dt)
         self._update_environment_effects(dt)
@@ -200,7 +201,7 @@ class GameState:
             )
         if self.final_bloom.restored:
             self.match_phase = "won"
-        elif self.players and all(player.state == "spirit" for player in self.players.values()):
+        elif self.players and all(player.state == "spirit" for player in self.players.values()) and not self._solo_self_revive_available():
             self.match_phase = "lost"
 
     def build_snapshot(self) -> dict:
@@ -214,8 +215,8 @@ class GameState:
             "players": [self._player_snapshot(player) for player in self.players.values()],
             "eggs": [egg.to_dict() for egg in self.eggs],
             "spirit_pickups": [pickup.to_dict() for pickup in self.spirit_pickups],
-            "restoration_zones": [zone.to_dict() for zone in self.restoration_zones],
-            "hazard_zones": [zone.to_dict() for zone in self.hazard_zones],
+            "restoration_shrines": [shrine.to_dict() for shrine in self.restoration_shrines],
+            "bramble_patches": [patch.to_dict() for patch in self.bramble_patches],
             "shrine": self.shrine.to_dict(),
             "enemies": [enemy.to_dict() for enemy in self.enemies],
             "final_bloom": self.final_bloom.to_dict(),
@@ -260,9 +261,9 @@ class GameState:
 
         if self._pressed(player, "interact"):
             if not self._try_revive(player):
-                if not self._try_cleanse_enemy_spawn(player):
-                    if not self._try_restore_zone(player):
-                        pass
+                if not self._try_store_revival_egg(player):
+                    if not self._try_cleanse_enemy_spawn(player):
+                        self._try_restore_shrine(player)
 
     def _update_environment_effects(self, dt: float) -> None:
         for player in self.players.values():
@@ -271,11 +272,11 @@ class GameState:
                 continue
 
             hazard_damage = 0.0
-            for hazard in self.hazard_zones:
-                if not hazard.active:
+            for patch in self.bramble_patches:
+                if not patch.active:
                     continue
-                if distance(player.x, player.y, hazard.x, hazard.y) <= player.radius + hazard.radius:
-                    hazard_damage += hazard.damage_per_second * dt
+                if distance(player.x, player.y, patch.x, patch.y) <= player.radius + patch.radius:
+                    hazard_damage += patch.damage_per_second * dt
             if hazard_damage > 0.0:
                 player.health = max(0, int(player.health - hazard_damage))
                 if player.health <= 0:
@@ -330,11 +331,11 @@ class GameState:
         enemy: EnemyState,
         alive_targets: list[PlayerState],
     ) -> tuple[float, float, PlayerState | None]:
-        restored_zone = self._restored_zone_at(enemy.x, enemy.y, enemy.radius)
-        if restored_zone is not None:
+        restored_shrine = self._restored_shrine_area_at(enemy.x, enemy.y, enemy.radius)
+        if restored_shrine is not None:
             enemy.state = "return"
             enemy.target_player_id = ""
-            exit_x, exit_y = self._nearest_restored_zone_exit(restored_zone, enemy.x, enemy.y, enemy.radius)
+            exit_x, exit_y = self._nearest_restored_zone_exit(restored_shrine, enemy.x, enemy.y, enemy.radius)
             enemy.last_known_x = exit_x
             enemy.last_known_y = exit_y
             return exit_x, exit_y, None
@@ -343,8 +344,8 @@ class GameState:
             player
             for player in alive_targets
             if distance(player.x, player.y, enemy.x, enemy.y) <= enemy.aggro_radius
-            and distance(player.x, player.y, enemy.home_x, enemy.home_y) <= enemy.leash_radius
-            and self._restored_zone_at(player.x, player.y, player.radius) is None
+            and self._within_enemy_leash(enemy, player.x, player.y)
+            and self._restored_shrine_area_at(player.x, player.y, player.radius) is None
         ]
         if visible_targets:
             target = min(
@@ -375,6 +376,17 @@ class GameState:
 
         enemy.state = "return"
         return enemy.home_x, enemy.home_y, None
+
+    def _enemy_leash_anchors(self, enemy: EnemyState) -> list[tuple[float, float]]:
+        anchors = [(enemy.home_x, enemy.home_y)]
+        anchors.extend(self.enemy_patrol_routes.get(enemy.enemy_id, []))
+        return anchors
+
+    def _within_enemy_leash(self, enemy: EnemyState, x: float, y: float) -> bool:
+        return any(
+            distance(x, y, anchor_x, anchor_y) <= enemy.leash_radius
+            for anchor_x, anchor_y in self._enemy_leash_anchors(enemy)
+        )
 
     def _path_for_enemy(
         self,
@@ -441,9 +453,20 @@ class GameState:
         return getattr(player.input_state, attr) and not getattr(player.prev_input_state, attr)
 
     def _try_revive(self, player: PlayerState) -> bool:
-        if player.state != "alive" or player.revival_eggs <= 0:
-            return False
         if distance(player.x, player.y, self.shrine.x, self.shrine.y) > self.shrine.interact_radius:
+            return False
+
+        if player.state == "spirit":
+            if not self._solo_self_revive_available():
+                return False
+            self.shrine.stored_revival_eggs = max(0, self.shrine.stored_revival_eggs - 1)
+            player.state = "alive"
+            player.health = player.max_health // 2
+            player.x = self.shrine.x + 36.0
+            player.y = self.shrine.y
+            return True
+
+        if player.state != "alive" or player.revival_eggs <= 0:
             return False
 
         spirit_targets = [
@@ -466,19 +489,31 @@ class GameState:
         revived.y = self.shrine.y
         return True
 
-    def _try_restore_zone(self, player: PlayerState) -> bool:
+    def _solo_self_revive_available(self) -> bool:
+        return len(self.players) == 1 and self.shrine.stored_revival_eggs > 0
+
+    def _try_store_revival_egg(self, player: PlayerState) -> bool:
+        if player.state != "alive" or player.revival_eggs <= 0:
+            return False
+        if distance(player.x, player.y, self.shrine.x, self.shrine.y) > self.shrine.interact_radius:
+            return False
+        self._consume_carried_eggs(player, "revival", 1)
+        self.shrine.stored_revival_eggs += 1
+        return True
+
+    def _try_restore_shrine(self, player: PlayerState) -> bool:
         if player.state != "alive":
             return False
-        for zone in self.restoration_zones:
-            if zone.restored:
+        for shrine in self.restoration_shrines:
+            if shrine.restored:
                 continue
-            if distance(player.x, player.y, zone.x, zone.y) > zone.interact_radius:
+            if distance(player.x, player.y, shrine.x, shrine.y) > shrine.interact_radius:
                 continue
-            if not self._has_eggs(player, zone.required_egg_type, zone.restore_cost):
+            if not self._has_eggs(player, shrine.required_egg_type, shrine.restore_cost):
                 continue
-            self._consume_carried_eggs(player, zone.required_egg_type, zone.restore_cost)
-            zone.restored = True
-            self._sync_hazard_state()
+            self._consume_carried_eggs(player, shrine.required_egg_type, shrine.restore_cost)
+            shrine.restored = True
+            self._sync_bramble_state()
             self.enemy_paths = {}
             self.enemy_path_targets = {}
             return True
@@ -487,7 +522,7 @@ class GameState:
     def _update_final_bloom_channel(self, dt: float) -> None:
         if self.final_bloom.restored:
             return
-        if any(not zone.restored for zone in self.restoration_zones):
+        if any(not shrine.restored for shrine in self.restoration_shrines):
             self.final_bloom.channel_player_id = ""
             self.final_bloom.channel_progress_seconds = 0.0
             return
@@ -582,32 +617,33 @@ class GameState:
             for pickup in self.map.spirit_pickups
         ]
 
-    def _build_restoration_zones_from_map(self) -> list[RestorationZoneState]:
+    def _build_restoration_shrines_from_map(self) -> list[RestorationShrineState]:
         return [
-            RestorationZoneState(
-                zone_id=zone.zone_id,
-                x=zone.x,
-                y=zone.y,
-                radius=zone.radius,
-                interact_radius=zone.interact_radius,
-                required_egg_type=zone.required_egg_type,
-                restore_cost=zone.restore_cost,
+            RestorationShrineState(
+                shrine_id=shrine.shrine_id,
+                x=shrine.x,
+                y=shrine.y,
+                interact_radius=shrine.interact_radius,
+                restore_radius=shrine.restore_radius,
+                required_egg_type=shrine.required_egg_type,
+                restore_cost=shrine.restore_cost,
             )
-            for zone in self.map.restoration_zones
+            for shrine in self.map.restoration_shrines
         ]
 
-    def _build_hazard_zones_from_map(self) -> list[HazardZoneState]:
+    def _build_bramble_patches_from_map(self) -> list[BramblePatchState]:
         return [
-            HazardZoneState(
-                zone_id=zone.zone_id,
-                x=zone.x,
-                y=zone.y,
-                radius=zone.radius,
-                damage_per_second=zone.damage_per_second,
-                slow_multiplier=zone.slow_multiplier,
-                cleared_by_zone_id=zone.cleared_by_zone_id,
+            BramblePatchState(
+                patch_id=patch.patch_id,
+                x=patch.x,
+                y=patch.y,
+                rotation_degrees=patch.rotation_degrees,
+                radius=patch.radius,
+                damage_per_second=patch.damage_per_second,
+                slow_multiplier=patch.slow_multiplier,
+                cleared_by_shrine_id=patch.cleared_by_shrine_id,
             )
-            for zone in self.map.hazard_zones
+            for patch in self.map.bramble_patches
         ]
 
     def _build_enemy_patrol_routes(self) -> dict[str, list[tuple[float, float]]]:
@@ -642,25 +678,25 @@ class GameState:
     def _reset_spirit_pickups(self) -> None:
         self.spirit_pickups = self._build_spirit_pickups_from_map()
 
-    def _reset_restoration_zones(self) -> None:
-        self.restoration_zones = self._build_restoration_zones_from_map()
+    def _reset_restoration_shrines(self) -> None:
+        self.restoration_shrines = self._build_restoration_shrines_from_map()
 
-    def _reset_hazard_zones(self) -> None:
-        self.hazard_zones = self._build_hazard_zones_from_map()
-        self._sync_hazard_state()
+    def _reset_bramble_patches(self) -> None:
+        self.bramble_patches = self._build_bramble_patches_from_map()
+        self._sync_bramble_state()
 
     def _reset_enemies(self) -> None:
         self.enemies = self._build_enemies_from_map()
         self.enemy_paths = {}
         self.enemy_path_targets = {}
 
-    def _sync_hazard_state(self) -> None:
-        restored_lookup = {zone.zone_id: zone.restored for zone in self.restoration_zones}
-        for hazard in self.hazard_zones:
-            if hazard.cleared_by_zone_id:
-                hazard.active = not restored_lookup.get(hazard.cleared_by_zone_id, False)
+    def _sync_bramble_state(self) -> None:
+        restored_lookup = {shrine.shrine_id: shrine.restored for shrine in self.restoration_shrines}
+        for patch in self.bramble_patches:
+            if patch.cleared_by_shrine_id:
+                patch.active = not restored_lookup.get(patch.cleared_by_shrine_id, False)
             else:
-                hazard.active = True
+                patch.active = True
 
     def _try_collect_eggs(self, player: PlayerState) -> None:
         for egg in self.eggs:
@@ -715,19 +751,19 @@ class GameState:
 
     def _hazard_slow_multiplier_at(self, x: float, y: float) -> float:
         multiplier = DEFAULT_HAZARD_SLOW_MULTIPLIER
-        for hazard in self.hazard_zones:
-            if not hazard.active:
+        for patch in self.bramble_patches:
+            if not patch.active:
                 continue
-            if distance(x, y, hazard.x, hazard.y) <= hazard.radius:
-                multiplier = min(multiplier, hazard.slow_multiplier)
+            if distance(x, y, patch.x, patch.y) <= patch.radius:
+                multiplier = min(multiplier, patch.slow_multiplier)
         return multiplier
 
     def _barrier_is_active(self, barrier: TraversalBarrierDef) -> bool:
         if not barrier.cleared_by_zone_id:
             return True
-        for zone in self.restoration_zones:
-            if zone.zone_id == barrier.cleared_by_zone_id:
-                return not zone.restored
+        for shrine in self.restoration_shrines:
+            if shrine.shrine_id == barrier.cleared_by_zone_id:
+                return not shrine.restored
         return True
 
     @staticmethod
@@ -755,55 +791,55 @@ class GameState:
     def _enemy_collision_rects(self) -> list[CollisionRect]:
         return self.map.collision_rects + self._barrier_collision_rects(self._active_barriers())
 
-    def _restored_zone_at(self, x: float, y: float, radius: float = 0.0) -> RestorationZoneState | None:
-        for zone in self.restoration_zones:
-            if not zone.restored:
+    def _restored_shrine_area_at(self, x: float, y: float, radius: float = 0.0) -> RestorationShrineState | None:
+        for shrine in self.restoration_shrines:
+            if not shrine.restored:
                 continue
-            if distance(x, y, zone.x, zone.y) <= zone.radius + radius:
-                return zone
+            if distance(x, y, shrine.x, shrine.y) <= shrine.restore_radius + radius:
+                return shrine
         return None
 
     def _nearest_restored_zone_exit(
         self,
-        zone: RestorationZoneState,
+        shrine: RestorationShrineState,
         x: float,
         y: float,
         radius: float,
     ) -> tuple[float, float]:
-        delta_x = x - zone.x
-        delta_y = y - zone.y
+        delta_x = x - shrine.x
+        delta_y = y - shrine.y
         magnitude = math.hypot(delta_x, delta_y)
         if magnitude < 0.001:
             delta_x = 1.0
             delta_y = 0.0
             magnitude = 1.0
-        clearance = zone.radius + radius + 10.0
-        exit_x = zone.x + (delta_x / magnitude) * clearance
-        exit_y = zone.y + (delta_y / magnitude) * clearance
+        clearance = shrine.restore_radius + radius + 10.0
+        exit_x = shrine.x + (delta_x / magnitude) * clearance
+        exit_y = shrine.y + (delta_y / magnitude) * clearance
         return (
             max(radius, min(self.map.world_width - radius, exit_x)),
             max(radius, min(self.map.world_height - radius, exit_y)),
         )
 
     def _keep_enemy_out_of_restored_zones(self, x: float, y: float, radius: float) -> tuple[float, float]:
-        zone = self._restored_zone_at(x, y, radius)
-        if zone is None:
+        shrine = self._restored_shrine_area_at(x, y, radius)
+        if shrine is None:
             return x, y
-        return self._nearest_restored_zone_exit(zone, x, y, radius)
+        return self._nearest_restored_zone_exit(shrine, x, y, radius)
 
     def _restored_zone_blocked_cells(self) -> set[tuple[int, int]]:
         blocked: set[tuple[int, int]] = set()
-        for zone in self.restoration_zones:
-            if not zone.restored:
+        for shrine in self.restoration_shrines:
+            if not shrine.restored:
                 continue
-            min_col = max(0, int((zone.x - zone.radius) // self.nav_grid.cell_size) - 1)
-            max_col = min(self.nav_grid.cols - 1, int((zone.x + zone.radius) // self.nav_grid.cell_size) + 1)
-            min_row = max(0, int((zone.y - zone.radius) // self.nav_grid.cell_size) - 1)
-            max_row = min(self.nav_grid.rows - 1, int((zone.y + zone.radius) // self.nav_grid.cell_size) + 1)
+            min_col = max(0, int((shrine.x - shrine.restore_radius) // self.nav_grid.cell_size) - 1)
+            max_col = min(self.nav_grid.cols - 1, int((shrine.x + shrine.restore_radius) // self.nav_grid.cell_size) + 1)
+            min_row = max(0, int((shrine.y - shrine.restore_radius) // self.nav_grid.cell_size) - 1)
+            max_row = min(self.nav_grid.rows - 1, int((shrine.y + shrine.restore_radius) // self.nav_grid.cell_size) + 1)
             for col in range(min_col, max_col + 1):
                 for row in range(min_row, max_row + 1):
                     center_x, center_y = self.nav_grid.cell_center((col, row))
-                    if distance(center_x, center_y, zone.x, zone.y) <= zone.radius:
+                    if distance(center_x, center_y, shrine.x, shrine.y) <= shrine.restore_radius:
                         blocked.add((col, row))
         for barrier_rect in self._barrier_collision_rects(self._active_barriers()):
             min_col = max(0, int(barrier_rect.x // self.nav_grid.cell_size) - 1)
@@ -822,20 +858,26 @@ class GameState:
             return "The Heart Garden bloomed. Press Enter as host to play again."
         if self.match_phase == "lost":
             return "All caretakers became spirits. Press Enter as host to retry."
+        if self._solo_self_revive_available() and any(player.state == "spirit" for player in self.players.values()):
+            return "Return to the shrine as a spirit and interact to use the stored revival egg."
+        if len(self.players) == 1 and self.shrine.stored_revival_eggs > 0:
+            return f"The shrine is holding {self.shrine.stored_revival_eggs} revival egg. You can recover from death by returning there as a spirit."
         if any(player.state == "spirit" for player in self.players.values()):
             if any(not pickup.collected for pickup in self.spirit_pickups):
                 return "Spirits can gather spirit seeds beyond spirit barriers."
             return "Use a revival egg at the shrine to bring back a teammate."
+        if len(self.players) == 1 and self.shrine.stored_revival_eggs <= 0 and any(egg.egg_type == "revival" and not egg.collected for egg in self.eggs):
+            return "In solo play, store a revival egg at the shrine before taking spirit-only routes."
         if any(player.spirit_seeds > 0 for player in self.players.values()) and self.enemies:
             return "Carry a spirit seed to a bramble nest to cleanse that enemy."
-        unrestored_count = sum(1 for zone in self.restoration_zones if not zone.restored)
+        unrestored_count = sum(1 for shrine in self.restoration_shrines if not shrine.restored)
         if unrestored_count > 0:
-            return f"Restore the garden circles with restoration eggs. Zones left: {unrestored_count}."
+            return f"Offer restoration eggs at the bramble shrines. Shrines left: {unrestored_count}."
         if any(not egg.collected for egg in self.eggs):
             return f"Gather the remaining eggs and hold interact at the Heart Bloom for 3 seconds with a {self._final_bloom_egg_type()} egg."
-        return f"All zones are restored. Hold interact at the Heart Bloom for 3 seconds with a {self._final_bloom_egg_type()} egg."
+        return f"All bramble shrines are restored. Hold interact at the Heart Bloom for 3 seconds with a {self._final_bloom_egg_type()} egg."
 
     def _final_bloom_egg_type(self) -> str:
-        if self.restoration_zones or any(egg.egg_type == "restoration" for egg in self.eggs):
+        if self.restoration_shrines or any(egg.egg_type == "restoration" for egg in self.eggs):
             return "restoration"
         return "revival"

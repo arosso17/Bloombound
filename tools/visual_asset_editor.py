@@ -69,6 +69,8 @@ class VisualAssetEditor:
             "x": tk.StringVar(value="0"),
             "y": tk.StringVar(value="0"),
             "rotation_degrees": tk.StringVar(value="0"),
+            "start_angle_degrees": tk.StringVar(value="0"),
+            "end_angle_degrees": tk.StringVar(value="180"),
             "width": tk.StringVar(value="24"),
             "height": tk.StringVar(value="24"),
             "radius": tk.StringVar(value="12"),
@@ -156,11 +158,13 @@ class VisualAssetEditor:
         ttk.Button(shape_buttons, text="Add Circle", command=lambda: self.add_shape("circle")).grid(row=0, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Rect", command=lambda: self.add_shape("rect")).grid(row=1, column=0, pady=2, sticky="ew")
         ttk.Button(shape_buttons, text="Add Ellipse", command=lambda: self.add_shape("ellipse")).grid(row=2, column=0, pady=2, sticky="ew")
-        ttk.Button(shape_buttons, text="Add Line", command=lambda: self.add_shape("line")).grid(row=3, column=0, pady=2, sticky="ew")
-        ttk.Button(shape_buttons, text="Delete", command=self.delete_shape).grid(row=4, column=0, pady=(8, 2), sticky="ew")
-        ttk.Button(shape_buttons, text="Duplicate", command=self.duplicate_shape).grid(row=5, column=0, pady=2, sticky="ew")
-        ttk.Button(shape_buttons, text="Move Up", command=lambda: self.move_shape(-1)).grid(row=6, column=0, pady=2, sticky="ew")
-        ttk.Button(shape_buttons, text="Move Down", command=lambda: self.move_shape(1)).grid(row=7, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Add Triangle", command=lambda: self.add_shape("triangle")).grid(row=3, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Add Arc", command=lambda: self.add_shape("arc")).grid(row=4, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Add Line", command=lambda: self.add_shape("line")).grid(row=5, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Delete", command=self.delete_shape).grid(row=6, column=0, pady=(8, 2), sticky="ew")
+        ttk.Button(shape_buttons, text="Duplicate", command=self.duplicate_shape).grid(row=7, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Move Up", command=lambda: self.move_shape(-1)).grid(row=8, column=0, pady=2, sticky="ew")
+        ttk.Button(shape_buttons, text="Move Down", command=lambda: self.move_shape(1)).grid(row=9, column=0, pady=2, sticky="ew")
 
     def _build_editor(self, parent: ttk.Frame) -> None:
         ttk.Label(parent, text="Shape Properties").grid(row=0, column=0, sticky="w", pady=(0, 8))
@@ -169,6 +173,8 @@ class VisualAssetEditor:
             ("x", "X"),
             ("y", "Y"),
             ("rotation_degrees", "Rotation"),
+            ("start_angle_degrees", "Start Angle"),
+            ("end_angle_degrees", "End Angle"),
             ("width", "Width"),
             ("height", "Height"),
             ("radius", "Radius"),
@@ -364,12 +370,14 @@ class VisualAssetEditor:
             "x": 12,
             "y": 12,
             "rotation_degrees": 0,
+            "start_angle_degrees": 0,
+            "end_angle_degrees": 180,
             "width": 24,
             "height": 24,
             "radius": 12,
             "x2": 36,
             "y2": 36,
-            "fill": [255, 255, 255] if kind != "line" else None,
+            "fill": [255, 255, 255] if kind not in {"line", "arc"} else None,
             "outline": [48, 58, 64],
             "outline_width": 2,
         }
@@ -430,6 +438,8 @@ class VisualAssetEditor:
             shape["x"] = float(self.shape_fields["x"].get())
             shape["y"] = float(self.shape_fields["y"].get())
             shape["rotation_degrees"] = float(self.shape_fields["rotation_degrees"].get())
+            shape["start_angle_degrees"] = float(self.shape_fields["start_angle_degrees"].get())
+            shape["end_angle_degrees"] = float(self.shape_fields["end_angle_degrees"].get())
             shape["width"] = float(self.shape_fields["width"].get())
             shape["height"] = float(self.shape_fields["height"].get())
             shape["radius"] = float(self.shape_fields["radius"].get())
@@ -465,6 +475,8 @@ class VisualAssetEditor:
         self.shape_fields["x"].set(str(shape.get("x", 0)))
         self.shape_fields["y"].set(str(shape.get("y", 0)))
         self.shape_fields["rotation_degrees"].set(str(shape.get("rotation_degrees", 0)))
+        self.shape_fields["start_angle_degrees"].set(str(shape.get("start_angle_degrees", 0)))
+        self.shape_fields["end_angle_degrees"].set(str(shape.get("end_angle_degrees", 180)))
         self.shape_fields["width"].set(str(shape.get("width", 0)))
         self.shape_fields["height"].set(str(shape.get("height", 0)))
         self.shape_fields["radius"].set(str(shape.get("radius", 0)))
@@ -593,7 +605,22 @@ class VisualAssetEditor:
             )
             return
 
-        if shape["kind"] in {"rect", "ellipse"}:
+        if shape["kind"] == "arc":
+            points = self._shape_screen_points(shape, offset_x, offset_y, scale)
+            if len(points) < 2:
+                return
+            flat_points = [coordinate for point in points for coordinate in point]
+            self.preview_canvas.create_line(
+                *flat_points,
+                fill=outline or "#000000",
+                width=outline_width,
+                smooth=True,
+                splinesteps=24,
+                tags=tags,
+            )
+            return
+
+        if shape["kind"] in {"rect", "ellipse", "triangle"}:
             points = self._shape_screen_points(shape, offset_x, offset_y, scale)
             if not points:
                 return
@@ -784,7 +811,7 @@ class VisualAssetEditor:
                 ("w", x - radius, y),
             ]
 
-        if kind in {"rect", "ellipse"}:
+        if kind in {"rect", "ellipse", "triangle"}:
             points = self._shape_screen_points(shape, offset_x, offset_y, scale)
             if len(points) == 4:
                 x, y = points[0]
@@ -797,6 +824,27 @@ class VisualAssetEditor:
                     ("se", x3, y3),
                     ("sw", x4, y4),
                 ]
+            if len(points) == 3:
+                x, y = points[0]
+                x2, y2 = points[1]
+                x3, y3 = points[2]
+                return [
+                    ("n", x, y),
+                    ("se", x2, y2),
+                    ("sw", x3, y3),
+                ]
+            x = offset_x + float(shape.get("x", 0)) * scale
+            y = offset_y + float(shape.get("y", 0)) * scale
+            width = float(shape.get("width", 0)) * scale
+            height = float(shape.get("height", 0)) * scale
+            return [
+                ("nw", x, y),
+                ("ne", x + width, y),
+                ("sw", x, y + height),
+                ("se", x + width, y + height),
+            ]
+
+        if kind == "arc":
             x = offset_x + float(shape.get("x", 0)) * scale
             y = offset_y + float(shape.get("y", 0)) * scale
             width = float(shape.get("width", 0)) * scale
@@ -840,8 +888,29 @@ class VisualAssetEditor:
             shape["radius"] = round(max(min_size, radius), 2)
             return
 
-        if kind in {"rect", "ellipse"}:
+        if kind in {"rect", "ellipse", "triangle"}:
             world_x, world_y = self._inverse_rotate_point_for_shape(shape, world_x, world_y)
+            left = float(shape.get("x", 0))
+            top = float(shape.get("y", 0))
+            right = left + float(shape.get("width", 0))
+            bottom = top + float(shape.get("height", 0))
+
+            if "w" in handle_name:
+                left = min(world_x, right - min_size)
+            if "e" in handle_name:
+                right = max(world_x, left + min_size)
+            if "n" in handle_name:
+                top = min(world_y, bottom - min_size)
+            if "s" in handle_name:
+                bottom = max(world_y, top + min_size)
+
+            shape["x"] = round(left, 2)
+            shape["y"] = round(top, 2)
+            shape["width"] = round(max(min_size, right - left), 2)
+            shape["height"] = round(max(min_size, bottom - top), 2)
+            return
+
+        if kind == "arc":
             left = float(shape.get("x", 0))
             top = float(shape.get("y", 0))
             right = left + float(shape.get("width", 0))
@@ -905,6 +974,32 @@ class VisualAssetEditor:
             norm_y = (rotated_y - center_y) / (height / 2)
             return (norm_x * norm_x) + (norm_y * norm_y) <= 1.0
 
+        if kind == "triangle":
+            rotated_x, rotated_y = self._inverse_rotate_point_for_shape(shape, world_x, world_y)
+            x = float(shape.get("x", 0))
+            y = float(shape.get("y", 0))
+            width = float(shape.get("width", 0))
+            height = float(shape.get("height", 0))
+            if width <= 0 or height <= 0:
+                return False
+            ax, ay = x + width / 2, y
+            bx, by = x + width, y + height
+            cx, cy = x, y + height
+            denominator = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy))
+            if abs(denominator) < 1e-6:
+                return False
+            alpha = (((by - cy) * (rotated_x - cx)) + ((cx - bx) * (rotated_y - cy))) / denominator
+            beta = (((cy - ay) * (rotated_x - cx)) + ((ax - cx) * (rotated_y - cy))) / denominator
+            gamma = 1.0 - alpha - beta
+            return alpha >= 0.0 and beta >= 0.0 and gamma >= 0.0
+
+        if kind == "arc":
+            x = float(shape.get("x", 0))
+            y = float(shape.get("y", 0))
+            width = float(shape.get("width", 0))
+            height = float(shape.get("height", 0))
+            return x <= world_x <= x + width and y <= world_y <= y + height
+
         if kind == "line":
             x1 = float(shape.get("x", 0))
             y1 = float(shape.get("y", 0))
@@ -965,13 +1060,26 @@ class VisualAssetEditor:
             y = offset_y + float(shape.get("y", 0)) * scale
             return (x - radius, y - radius, x + radius, y + radius)
 
-        if kind in {"rect", "ellipse"}:
+        if kind in {"rect", "ellipse", "triangle"}:
             points = self._shape_screen_points(shape, offset_x, offset_y, scale)
             if not points:
                 return None
             xs = [point[0] for point in points]
             ys = [point[1] for point in points]
             return (min(xs), min(ys), max(xs), max(ys))
+
+        if kind == "arc":
+            x = offset_x + float(shape.get("x", 0)) * scale
+            y = offset_y + float(shape.get("y", 0)) * scale
+            width = float(shape.get("width", 0)) * scale
+            height = float(shape.get("height", 0)) * scale
+            padding = max(6.0, float(shape.get("outline_width", 0)) * scale)
+            return (
+                x - padding,
+                y - padding,
+                x + width + padding,
+                y + height + padding,
+            )
 
         if kind == "line":
             x1 = float(shape.get("x", 0))
@@ -1046,6 +1154,42 @@ class VisualAssetEditor:
                 points.append((offset_x + rotated_x * scale, offset_y + rotated_y * scale))
             return points
 
+        if kind == "triangle":
+            points = [
+                (center_x, y),
+                (x + width, y + height),
+                (x, y + height),
+            ]
+            return [
+                (
+                    offset_x + rotated_x * scale,
+                    offset_y + rotated_y * scale,
+                )
+                for rotated_x, rotated_y in (
+                    self._rotate_point(px, py, center_x, center_y, rotation)
+                    for px, py in points
+                )
+            ]
+
+        if kind == "arc":
+            points: list[tuple[float, float]] = []
+            radius_x = width / 2
+            radius_y = height / 2
+            if radius_x <= 0 or radius_y <= 0:
+                return points
+            start_angle = math.radians(float(shape.get("start_angle_degrees", 0)) + float(shape.get("rotation_degrees", 0)))
+            end_angle = math.radians(float(shape.get("end_angle_degrees", 180)) + float(shape.get("rotation_degrees", 0)))
+            steps = 16
+            if abs(end_angle - start_angle) < 1e-6:
+                angle_values = [start_angle]
+            else:
+                angle_values = [start_angle + ((end_angle - start_angle) * step / steps) for step in range(steps + 1)]
+            for theta in angle_values:
+                point_x = center_x + math.cos(theta) * radius_x
+                point_y = center_y + math.sin(theta) * radius_y
+                points.append((offset_x + point_x * scale, offset_y + point_y * scale))
+            return points
+
         return []
 
     def _inverse_rotate_point_for_shape(self, shape: dict, world_x: float, world_y: float) -> tuple[float, float]:
@@ -1065,7 +1209,7 @@ class VisualAssetEditor:
         kind = shape["kind"]
         if kind == "circle":
             return float(shape.get("x", 0)), float(shape.get("y", 0))
-        if kind in {"rect", "ellipse"}:
+        if kind in {"rect", "ellipse", "triangle", "arc"}:
             return (
                 float(shape.get("x", 0)) + float(shape.get("width", 0)) / 2,
                 float(shape.get("y", 0)) + float(shape.get("height", 0)) / 2,
@@ -1091,7 +1235,7 @@ class VisualAssetEditor:
         if shape["kind"] == "circle":
             return None
         center_x, center_y = self._shape_center(shape)
-        if shape["kind"] in {"rect", "ellipse"}:
+        if shape["kind"] in {"rect", "ellipse", "triangle", "arc"}:
             local_x = center_x
             local_y = float(shape.get("y", 0)) - 18.0
         else:
